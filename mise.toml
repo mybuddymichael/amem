@@ -10,5 +10,8 @@ run = "go build -o /dev/null ."
 [tasks.format]
 run = "gofumpt -l -w ."
 
+[tasks.lint]
+run = "golangci-lint run"
+
 [tasks.check]
-depends = ["format", "test", "build"]
+depends = ["format", "lint", "test", "build"]
