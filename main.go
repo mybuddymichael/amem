@@ -8,8 +8,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-func main() {
-	cmd := &cli.Command{
+func buildCommand() *cli.Command {
+	return &cli.Command{
 		Name:  "amem",
 		Usage: "A command-line tool that gives an LLM agent memory",
 		Commands: []*cli.Command{
@@ -258,6 +258,10 @@ func main() {
 			},
 		},
 	}
+}
+
+func main() {
+	cmd := buildCommand()
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
