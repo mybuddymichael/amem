@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"amem/db"
 	"github.com/urfave/cli/v3"
 )
 
@@ -41,7 +42,24 @@ func buildCommand() *cli.Command {
 					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return fmt.Errorf("not yet implemented")
+					dbPath := cmd.String("db-path")
+					encryptionKey := cmd.String("encryption-key")
+
+					if dbPath == "" {
+						return fmt.Errorf("--db-path is required")
+					}
+					if encryptionKey == "" {
+						return fmt.Errorf("--encryption-key is required")
+					}
+
+					database, err := db.Init(dbPath, encryptionKey)
+					if err != nil {
+						return fmt.Errorf("failed to initialize database: %w", err)
+					}
+					defer database.Close()
+
+					fmt.Printf("Database initialized at %s\n", dbPath)
+					return nil
 				},
 			},
 			{
