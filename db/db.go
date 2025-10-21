@@ -26,7 +26,7 @@ func Open(path, key string) (*DB, error) {
 	}
 
 	if err := conn.Ping(); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
@@ -44,7 +44,7 @@ func Init(path, key string) (*DB, error) {
 	}
 
 	if err := migrate(db.conn); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 

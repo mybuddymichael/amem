@@ -13,7 +13,7 @@ func TestMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialize database: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Verify schema_migrations table exists
 	var count int
@@ -68,13 +68,15 @@ func TestMigrationsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("First init failed: %v", err)
 	}
-	db1.Close()
+	if err := db1.Close(); err != nil {
+		t.Fatalf("Failed to close db1: %v", err)
+	}
 
 	db2, err := Init(dbPath, key)
 	if err != nil {
 		t.Fatalf("Second init failed: %v", err)
 	}
-	defer db2.Close()
+	defer func() { _ = db2.Close() }()
 
 	// Verify version is still 1
 	version, err := getCurrentVersion(db2.conn)

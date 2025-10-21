@@ -106,13 +106,13 @@ func migrate(conn *sql.DB) error {
 
 		// Execute migration
 		if _, err := tx.Exec(m.Up); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("failed to apply migration %d: %w", m.Version, err)
 		}
 
 		// Record migration
 		if _, err := tx.Exec("INSERT INTO schema_migrations (version) VALUES (?)", m.Version); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return fmt.Errorf("failed to record migration %d: %w", m.Version, err)
 		}
 
