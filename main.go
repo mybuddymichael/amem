@@ -56,7 +56,11 @@ func buildCommand() *cli.Command {
 					if err != nil {
 						return fmt.Errorf("failed to initialize database: %w", err)
 					}
-					defer database.Close()
+					defer func() {
+						if err := database.Close(); err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: failed to close database: %v\n", err)
+						}
+					}()
 
 					fmt.Printf("Database initialized at %s\n", dbPath)
 					return nil
