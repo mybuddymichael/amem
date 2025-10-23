@@ -10,6 +10,7 @@ A command-line tool that gives an LLM agent memory.
 - sqlite
 - [urfave/cli/v3](https://github.com/urfave/cli) for the CLI
 - [go-sqlcipher](https://github.com/mutecomm/go-sqlcipher) for encrypting the database
+- [go-keyring](https://github.com/zalando/go-keyring) for OS keychain integration
 
 ## Examples
 
