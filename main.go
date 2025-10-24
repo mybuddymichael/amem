@@ -32,6 +32,63 @@ func withDB(fn func(*db.DB) error) error {
 	return fn(database)
 }
 
+func printEntities(entities []db.Entity, withIDs bool) {
+	for _, e := range entities {
+		if withIDs {
+			fmt.Printf("[%d] %s\n", e.ID, e.Text)
+		} else {
+			fmt.Printf("%s\n", e.Text)
+		}
+	}
+}
+
+func printObservations(observations []db.Observation, withIDs bool) {
+	for _, o := range observations {
+		if withIDs {
+			fmt.Printf("[%d] %s: %s (%s)\n", o.ID, o.EntityText, o.Text, o.Timestamp)
+		} else {
+			fmt.Printf("%s: %s (%s)\n", o.EntityText, o.Text, o.Timestamp)
+		}
+	}
+}
+
+func printRelationships(relationships []db.Relationship, withIDs bool) {
+	for _, r := range relationships {
+		if withIDs {
+			fmt.Printf("[%d] %s -[%s]-> %s (%s)\n", r.ID, r.FromText, r.Type, r.ToText, r.Timestamp)
+		} else {
+			fmt.Printf("%s -[%s]-> %s (%s)\n", r.FromText, r.Type, r.ToText, r.Timestamp)
+		}
+	}
+}
+
+func formatEntities(entities []db.Entity, withIDs bool) {
+	if len(entities) == 0 {
+		fmt.Println("No entities found")
+		return
+	}
+	fmt.Printf("Found %d entities:\n", len(entities))
+	printEntities(entities, withIDs)
+}
+
+func formatObservations(observations []db.Observation, withIDs bool) {
+	if len(observations) == 0 {
+		fmt.Println("No observations found")
+		return
+	}
+	fmt.Printf("Found %d observations:\n", len(observations))
+	printObservations(observations, withIDs)
+}
+
+func formatRelationships(relationships []db.Relationship, withIDs bool) {
+	if len(relationships) == 0 {
+		fmt.Println("No relationships found")
+		return
+	}
+	fmt.Printf("Found %d relationships:\n", len(relationships))
+	printRelationships(relationships, withIDs)
+}
+
 func buildCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "amem",
@@ -281,20 +338,7 @@ func buildCommand() *cli.Command {
 								if err != nil {
 									return err
 								}
-
-								if len(results) == 0 {
-									fmt.Println("No entities found")
-									return nil
-								}
-
-								fmt.Printf("Found %d entities:\n", len(results))
-								for _, e := range results {
-									if withIDs {
-										fmt.Printf("[%d] %s\n", e.ID, e.Text)
-									} else {
-										fmt.Printf("%s\n", e.Text)
-									}
-								}
+								formatEntities(results, withIDs)
 								return nil
 							})
 						},
@@ -319,20 +363,7 @@ func buildCommand() *cli.Command {
 								if err != nil {
 									return err
 								}
-
-								if len(results) == 0 {
-									fmt.Println("No observations found")
-									return nil
-								}
-
-								fmt.Printf("Found %d observations:\n", len(results))
-								for _, o := range results {
-									if withIDs {
-										fmt.Printf("[%d] %s: %s (%s)\n", o.ID, o.EntityText, o.Text, o.Timestamp)
-									} else {
-										fmt.Printf("%s: %s (%s)\n", o.EntityText, o.Text, o.Timestamp)
-									}
-								}
+								formatObservations(results, withIDs)
 								return nil
 							})
 						},
@@ -367,20 +398,7 @@ func buildCommand() *cli.Command {
 								if err != nil {
 									return err
 								}
-
-								if len(results) == 0 {
-									fmt.Println("No relationships found")
-									return nil
-								}
-
-								fmt.Printf("Found %d relationships:\n", len(results))
-								for _, r := range results {
-									if withIDs {
-										fmt.Printf("[%d] %s -[%s]-> %s (%s)\n", r.ID, r.FromText, r.Type, r.ToText, r.Timestamp)
-									} else {
-										fmt.Printf("%s -[%s]-> %s (%s)\n", r.FromText, r.Type, r.ToText, r.Timestamp)
-									}
-								}
+								formatRelationships(results, withIDs)
 								return nil
 							})
 						},
@@ -411,35 +429,17 @@ func buildCommand() *cli.Command {
 
 						if len(entities) > 0 {
 							fmt.Printf("\nEntities (%d):\n", len(entities))
-							for _, e := range entities {
-								if withIDs {
-									fmt.Printf("[%d] %s\n", e.ID, e.Text)
-								} else {
-									fmt.Printf("%s\n", e.Text)
-								}
-							}
+							printEntities(entities, withIDs)
 						}
 
 						if len(observations) > 0 {
 							fmt.Printf("\nObservations (%d):\n", len(observations))
-							for _, o := range observations {
-								if withIDs {
-									fmt.Printf("[%d] %s: %s (%s)\n", o.ID, o.EntityText, o.Text, o.Timestamp)
-								} else {
-									fmt.Printf("%s: %s (%s)\n", o.EntityText, o.Text, o.Timestamp)
-								}
-							}
+							printObservations(observations, withIDs)
 						}
 
 						if len(relationships) > 0 {
 							fmt.Printf("\nRelationships (%d):\n", len(relationships))
-							for _, r := range relationships {
-								if withIDs {
-									fmt.Printf("[%d] %s -[%s]-> %s (%s)\n", r.ID, r.FromText, r.Type, r.ToText, r.Timestamp)
-								} else {
-									fmt.Printf("%s -[%s]-> %s (%s)\n", r.FromText, r.Type, r.ToText, r.Timestamp)
-								}
-							}
+							printRelationships(relationships, withIDs)
 						}
 
 						return nil
