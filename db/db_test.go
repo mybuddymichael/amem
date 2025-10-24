@@ -97,3 +97,324 @@ func TestMigrationsIdempotent(t *testing.T) {
 		t.Errorf("Expected 1 migration record, got %d", migrationCount)
 	}
 }
+
+func TestAddEntity(t *testing.T) {
+	dbPath := t.TempDir() + "/test_add_entity.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add new entity
+	id1, err := db.AddEntity("Alice")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+	if id1 == 0 {
+		t.Error("Expected non-zero ID for new entity")
+	}
+
+	// Verify entity exists
+	var text string
+	err = db.conn.QueryRow("SELECT text FROM entities WHERE id = ?", id1).Scan(&text)
+	if err != nil {
+		t.Fatalf("Failed to query entity: %v", err)
+	}
+	if text != "Alice" {
+		t.Errorf("Expected 'Alice', got '%s'", text)
+	}
+
+	// Add duplicate entity - should return existing ID
+	id2, err := db.AddEntity("Alice")
+	if err != nil {
+		t.Fatalf("Failed to add duplicate entity: %v", err)
+	}
+	if id2 != id1 {
+		t.Errorf("Expected same ID for duplicate entity: got %d, want %d", id2, id1)
+	}
+
+	// Verify only one entity exists
+	var count int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM entities").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count entities: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 entity, got %d", count)
+	}
+}
+
+func TestAddObservation(t *testing.T) {
+	dbPath := t.TempDir() + "/test_add_observation.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add observation (entity doesn't exist yet)
+	obsID, err := db.AddObservation("Bob", "Likes coffee")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+	if obsID == 0 {
+		t.Error("Expected non-zero ID for observation")
+	}
+
+	// Verify entity was auto-created
+	var entityID int64
+	var entityText string
+	err = db.conn.QueryRow("SELECT id, text FROM entities WHERE text = 'Bob'").Scan(&entityID, &entityText)
+	if err != nil {
+		t.Fatalf("Entity was not auto-created: %v", err)
+	}
+
+	// Verify observation exists and links to entity
+	var observationText string
+	var linkedEntityID int64
+	err = db.conn.QueryRow("SELECT text, entity_id FROM observations WHERE id = ?", obsID).Scan(&observationText, &linkedEntityID)
+	if err != nil {
+		t.Fatalf("Failed to query observation: %v", err)
+	}
+	if observationText != "Likes coffee" {
+		t.Errorf("Expected 'Likes coffee', got '%s'", observationText)
+	}
+	if linkedEntityID != entityID {
+		t.Errorf("Observation linked to wrong entity: got %d, want %d", linkedEntityID, entityID)
+	}
+
+	// Add another observation for same entity
+	obsID2, err := db.AddObservation("Bob", "Works remotely")
+	if err != nil {
+		t.Fatalf("Failed to add second observation: %v", err)
+	}
+
+	// Verify still only one entity
+	var entityCount int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM entities").Scan(&entityCount)
+	if err != nil {
+		t.Fatalf("Failed to count entities: %v", err)
+	}
+	if entityCount != 1 {
+		t.Errorf("Expected 1 entity, got %d", entityCount)
+	}
+
+	// Verify two observations
+	var obsCount int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM observations WHERE entity_id = ?", entityID).Scan(&obsCount)
+	if err != nil {
+		t.Fatalf("Failed to count observations: %v", err)
+	}
+	if obsCount != 2 {
+		t.Errorf("Expected 2 observations, got %d", obsCount)
+	}
+
+	// Verify timestamp is set
+	var timestamp string
+	err = db.conn.QueryRow("SELECT timestamp FROM observations WHERE id = ?", obsID2).Scan(&timestamp)
+	if err != nil {
+		t.Fatalf("Failed to query timestamp: %v", err)
+	}
+	if timestamp == "" {
+		t.Error("Expected timestamp to be set")
+	}
+}
+
+func TestAddRelationship(t *testing.T) {
+	dbPath := t.TempDir() + "/test_add_relationship.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add relationship (neither entity exists yet)
+	relID, err := db.AddRelationship("Charlie", "Project X", "works_on")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+	if relID == 0 {
+		t.Error("Expected non-zero ID for relationship")
+	}
+
+	// Verify both entities were auto-created
+	var count int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM entities WHERE text IN ('Charlie', 'Project X')").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count entities: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("Expected 2 entities, got %d", count)
+	}
+
+	// Verify relationship exists and links correctly
+	var fromID, toID int64
+	var relType string
+	err = db.conn.QueryRow("SELECT from_id, to_id, type FROM relationships WHERE id = ?", relID).Scan(&fromID, &toID, &relType)
+	if err != nil {
+		t.Fatalf("Failed to query relationship: %v", err)
+	}
+	if relType != "works_on" {
+		t.Errorf("Expected 'works_on', got '%s'", relType)
+	}
+
+	// Verify fromID and toID point to correct entities
+	var fromText, toText string
+	err = db.conn.QueryRow("SELECT text FROM entities WHERE id = ?", fromID).Scan(&fromText)
+	if err != nil {
+		t.Fatalf("Failed to query from entity: %v", err)
+	}
+	if fromText != "Charlie" {
+		t.Errorf("Expected 'Charlie', got '%s'", fromText)
+	}
+
+	err = db.conn.QueryRow("SELECT text FROM entities WHERE id = ?", toID).Scan(&toText)
+	if err != nil {
+		t.Fatalf("Failed to query to entity: %v", err)
+	}
+	if toText != "Project X" {
+		t.Errorf("Expected 'Project X', got '%s'", toText)
+	}
+
+	// Add another relationship with existing entity
+	relID2, err := db.AddRelationship("Charlie", "Diana", "manages")
+	if err != nil {
+		t.Fatalf("Failed to add second relationship: %v", err)
+	}
+
+	// Verify only 3 entities now (Charlie, Project X, Diana)
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM entities").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count entities: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("Expected 3 entities, got %d", count)
+	}
+
+	// Verify timestamp is set
+	var timestamp string
+	err = db.conn.QueryRow("SELECT timestamp FROM relationships WHERE id = ?", relID2).Scan(&timestamp)
+	if err != nil {
+		t.Fatalf("Failed to query timestamp: %v", err)
+	}
+	if timestamp == "" {
+		t.Error("Expected timestamp to be set")
+	}
+}
+
+func TestAddRelationshipSelfReference(t *testing.T) {
+	dbPath := t.TempDir() + "/test_self_reference.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add self-referencing relationship
+	relID, err := db.AddRelationship("Eve", "Eve", "reports_to")
+	if err != nil {
+		t.Fatalf("Failed to add self-referencing relationship: %v", err)
+	}
+
+	// Verify only one entity was created
+	var count int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM entities").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count entities: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 entity, got %d", count)
+	}
+
+	// Verify from_id and to_id are the same
+	var fromID, toID int64
+	err = db.conn.QueryRow("SELECT from_id, to_id FROM relationships WHERE id = ?", relID).Scan(&fromID, &toID)
+	if err != nil {
+		t.Fatalf("Failed to query relationship: %v", err)
+	}
+	if fromID != toID {
+		t.Errorf("Expected from_id and to_id to be equal, got from=%d, to=%d", fromID, toID)
+	}
+}
+
+func TestCascadeDelete(t *testing.T) {
+	dbPath := t.TempDir() + "/test_cascade.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Create entity with observations and relationships
+	entityID, err := db.AddEntity("Frank")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	_, err = db.AddObservation("Frank", "First observation")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	_, err = db.AddObservation("Frank", "Second observation")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	_, err = db.AddRelationship("Frank", "Grace", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	_, err = db.AddRelationship("Grace", "Frank", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	// Delete the entity
+	_, err = db.conn.Exec("DELETE FROM entities WHERE id = ?", entityID)
+	if err != nil {
+		t.Fatalf("Failed to delete entity: %v", err)
+	}
+
+	// Verify observations were cascaded
+	var obsCount int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM observations WHERE entity_id = ?", entityID).Scan(&obsCount)
+	if err != nil {
+		t.Fatalf("Failed to count observations: %v", err)
+	}
+	if obsCount != 0 {
+		t.Errorf("Expected 0 observations after cascade delete, got %d", obsCount)
+	}
+
+	// Verify relationships were cascaded
+	var relCount int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM relationships WHERE from_id = ? OR to_id = ?", entityID, entityID).Scan(&relCount)
+	if err != nil {
+		t.Fatalf("Failed to count relationships: %v", err)
+	}
+	if relCount != 0 {
+		t.Errorf("Expected 0 relationships after cascade delete, got %d", relCount)
+	}
+
+	// Verify Grace still exists
+	var graceExists bool
+	err = db.conn.QueryRow("SELECT EXISTS(SELECT 1 FROM entities WHERE text = 'Grace')").Scan(&graceExists)
+	if err != nil {
+		t.Fatalf("Failed to check Grace existence: %v", err)
+	}
+	if !graceExists {
+		t.Error("Grace should still exist after Frank was deleted")
+	}
+}

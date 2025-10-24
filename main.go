@@ -12,6 +12,26 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// withDB loads config, opens database, executes fn, and handles cleanup
+func withDB(fn func(*db.DB) error) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	database, err := db.Open(cfg.DBPath, cfg.EncryptionKey)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := database.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close database: %v\n", err)
+		}
+	}()
+
+	return fn(database)
+}
+
 func buildCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "amem",
@@ -159,7 +179,21 @@ func buildCommand() *cli.Command {
 						Usage:     "Add one or more entities to the database",
 						ArgsUsage: "[entity names...]",
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							entities := cmd.Args().Slice()
+							if len(entities) == 0 {
+								return fmt.Errorf("at least one entity name is required")
+							}
+
+							return withDB(func(database *db.DB) error {
+								for _, entity := range entities {
+									_, err := database.AddEntity(entity)
+									if err != nil {
+										return fmt.Errorf("failed to add entity '%s': %w", entity, err)
+									}
+									fmt.Printf("Added entity: %s\n", entity)
+								}
+								return nil
+							})
 						},
 					},
 					{
@@ -178,7 +212,18 @@ func buildCommand() *cli.Command {
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							entity := cmd.String("entity")
+							text := cmd.String("text")
+
+							return withDB(func(database *db.DB) error {
+								_, err := database.AddObservation(entity, text)
+								if err != nil {
+									return err
+								}
+
+								fmt.Printf("Added observation about '%s'\n", entity)
+								return nil
+							})
 						},
 					},
 					{
@@ -202,7 +247,19 @@ func buildCommand() *cli.Command {
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							from := cmd.String("from")
+							to := cmd.String("to")
+							relType := cmd.String("type")
+
+							return withDB(func(database *db.DB) error {
+								_, err := database.AddRelationship(from, to, relType)
+								if err != nil {
+									return err
+								}
+
+								fmt.Printf("Added relationship: %s -[%s]-> %s\n", from, relType, to)
+								return nil
+							})
 						},
 					},
 				},
