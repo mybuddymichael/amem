@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 
 	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
@@ -12,6 +13,29 @@ type DB struct {
 	conn *sql.DB
 	path string
 	key  string
+}
+
+type Entity struct {
+	ID   int64
+	Text string
+}
+
+type Observation struct {
+	ID         int64
+	EntityID   int64
+	EntityText string
+	Text       string
+	Timestamp  string
+}
+
+type Relationship struct {
+	ID        int64
+	FromID    int64
+	FromText  string
+	ToID      int64
+	ToText    string
+	Type      string
+	Timestamp string
 }
 
 func Open(path, key string) (*DB, error) {
@@ -150,4 +174,177 @@ func (db *DB) AddRelationship(fromText, toText, relType string) (int64, error) {
 	}
 
 	return id, nil
+}
+
+// buildWhereClause builds a WHERE clause for keyword matching across multiple columns.
+func buildWhereClause(keywords []string, columns []string) (string, []interface{}) {
+	if len(keywords) == 0 {
+		return "", nil
+	}
+
+	var conditions []string
+	var args []interface{}
+
+	for _, keyword := range keywords {
+		var columnConditions []string
+		for _, col := range columns {
+			columnConditions = append(columnConditions, fmt.Sprintf("%s LIKE ?", col))
+			args = append(args, "%"+keyword+"%")
+		}
+		conditions = append(conditions, "("+strings.Join(columnConditions, " OR ")+")")
+	}
+
+	return strings.Join(conditions, " AND "), args
+}
+
+// SearchEntities searches entities by keywords.
+func (db *DB) SearchEntities(keywords []string) ([]Entity, error) {
+	query := "SELECT id, text FROM entities"
+	var args []interface{}
+
+	if len(keywords) > 0 {
+		whereClause, whereArgs := buildWhereClause(keywords, []string{"text"})
+		query += " WHERE " + whereClause
+		args = whereArgs
+	}
+
+	query += " ORDER BY text"
+
+	rows, err := db.conn.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search entities: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var results []Entity
+	for rows.Next() {
+		var e Entity
+		if err := rows.Scan(&e.ID, &e.Text); err != nil {
+			return nil, fmt.Errorf("failed to scan entity: %w", err)
+		}
+		results = append(results, e)
+	}
+
+	return results, rows.Err()
+}
+
+// SearchObservations searches observations with optional entity filter and keywords.
+func (db *DB) SearchObservations(entityText string, keywords []string) ([]Observation, error) {
+	query := `
+		SELECT o.id, o.entity_id, e.text, o.text, o.timestamp
+		FROM observations o
+		JOIN entities e ON o.entity_id = e.id
+	`
+	var args []interface{}
+	var whereClauses []string
+
+	if entityText != "" {
+		whereClauses = append(whereClauses, "e.text LIKE ?")
+		args = append(args, "%"+entityText+"%")
+	}
+
+	if len(keywords) > 0 {
+		whereClause, whereArgs := buildWhereClause(keywords, []string{"o.text", "e.text"})
+		whereClauses = append(whereClauses, "("+whereClause+")")
+		args = append(args, whereArgs...)
+	}
+
+	if len(whereClauses) > 0 {
+		query += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	query += " ORDER BY o.timestamp DESC"
+
+	rows, err := db.conn.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search observations: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var results []Observation
+	for rows.Next() {
+		var o Observation
+		if err := rows.Scan(&o.ID, &o.EntityID, &o.EntityText, &o.Text, &o.Timestamp); err != nil {
+			return nil, fmt.Errorf("failed to scan observation: %w", err)
+		}
+		results = append(results, o)
+	}
+
+	return results, rows.Err()
+}
+
+// SearchRelationships searches relationships with optional filters.
+func (db *DB) SearchRelationships(fromText, toText, relType string, keywords []string) ([]Relationship, error) {
+	query := `
+		SELECT r.id, r.from_id, e1.text, r.to_id, e2.text, r.type, r.timestamp
+		FROM relationships r
+		JOIN entities e1 ON r.from_id = e1.id
+		JOIN entities e2 ON r.to_id = e2.id
+	`
+	var args []interface{}
+	var whereClauses []string
+
+	if fromText != "" {
+		whereClauses = append(whereClauses, "e1.text LIKE ?")
+		args = append(args, "%"+fromText+"%")
+	}
+
+	if toText != "" {
+		whereClauses = append(whereClauses, "e2.text LIKE ?")
+		args = append(args, "%"+toText+"%")
+	}
+
+	if relType != "" {
+		whereClauses = append(whereClauses, "r.type LIKE ?")
+		args = append(args, "%"+relType+"%")
+	}
+
+	if len(keywords) > 0 {
+		whereClause, whereArgs := buildWhereClause(keywords, []string{"e1.text", "e2.text", "r.type"})
+		whereClauses = append(whereClauses, "("+whereClause+")")
+		args = append(args, whereArgs...)
+	}
+
+	if len(whereClauses) > 0 {
+		query += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	query += " ORDER BY r.timestamp DESC"
+
+	rows, err := db.conn.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search relationships: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var results []Relationship
+	for rows.Next() {
+		var r Relationship
+		if err := rows.Scan(&r.ID, &r.FromID, &r.FromText, &r.ToID, &r.ToText, &r.Type, &r.Timestamp); err != nil {
+			return nil, fmt.Errorf("failed to scan relationship: %w", err)
+		}
+		results = append(results, r)
+	}
+
+	return results, rows.Err()
+}
+
+// SearchAll searches across all types (entities, observations, relationships).
+func (db *DB) SearchAll(keywords []string) ([]Entity, []Observation, []Relationship, error) {
+	entities, err := db.SearchEntities(keywords)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	observations, err := db.SearchObservations("", keywords)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	relationships, err := db.SearchRelationships("", "", "", keywords)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return entities, observations, relationships, nil
 }

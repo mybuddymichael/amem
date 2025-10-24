@@ -273,7 +273,30 @@ func buildCommand() *cli.Command {
 						Usage:     "Search only entities",
 						ArgsUsage: "[keywords...]",
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							keywords := cmd.Args().Slice()
+							withIDs := cmd.Bool("with-ids")
+
+							return withDB(func(database *db.DB) error {
+								results, err := database.SearchEntities(keywords)
+								if err != nil {
+									return err
+								}
+
+								if len(results) == 0 {
+									fmt.Println("No entities found")
+									return nil
+								}
+
+								fmt.Printf("Found %d entities:\n", len(results))
+								for _, e := range results {
+									if withIDs {
+										fmt.Printf("[%d] %s\n", e.ID, e.Text)
+									} else {
+										fmt.Printf("%s\n", e.Text)
+									}
+								}
+								return nil
+							})
 						},
 					},
 					{
@@ -287,7 +310,31 @@ func buildCommand() *cli.Command {
 						},
 						ArgsUsage: "[keywords...]",
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							keywords := cmd.Args().Slice()
+							entityText := cmd.String("about")
+							withIDs := cmd.Bool("with-ids")
+
+							return withDB(func(database *db.DB) error {
+								results, err := database.SearchObservations(entityText, keywords)
+								if err != nil {
+									return err
+								}
+
+								if len(results) == 0 {
+									fmt.Println("No observations found")
+									return nil
+								}
+
+								fmt.Printf("Found %d observations:\n", len(results))
+								for _, o := range results {
+									if withIDs {
+										fmt.Printf("[%d] %s: %s (%s)\n", o.ID, o.EntityText, o.Text, o.Timestamp)
+									} else {
+										fmt.Printf("%s: %s (%s)\n", o.EntityText, o.Text, o.Timestamp)
+									}
+								}
+								return nil
+							})
 						},
 					},
 					{
@@ -309,7 +356,33 @@ func buildCommand() *cli.Command {
 						},
 						ArgsUsage: "[keywords...]",
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							keywords := cmd.Args().Slice()
+							fromText := cmd.String("from")
+							toText := cmd.String("to")
+							relType := cmd.String("type")
+							withIDs := cmd.Bool("with-ids")
+
+							return withDB(func(database *db.DB) error {
+								results, err := database.SearchRelationships(fromText, toText, relType, keywords)
+								if err != nil {
+									return err
+								}
+
+								if len(results) == 0 {
+									fmt.Println("No relationships found")
+									return nil
+								}
+
+								fmt.Printf("Found %d relationships:\n", len(results))
+								for _, r := range results {
+									if withIDs {
+										fmt.Printf("[%d] %s -[%s]-> %s (%s)\n", r.ID, r.FromText, r.Type, r.ToText, r.Timestamp)
+									} else {
+										fmt.Printf("%s -[%s]-> %s (%s)\n", r.FromText, r.Type, r.ToText, r.Timestamp)
+									}
+								}
+								return nil
+							})
 						},
 					},
 				},
@@ -321,7 +394,56 @@ func buildCommand() *cli.Command {
 				},
 				ArgsUsage: "[keywords...]",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return fmt.Errorf("not yet implemented")
+					keywords := cmd.Args().Slice()
+					withIDs := cmd.Bool("with-ids")
+
+					return withDB(func(database *db.DB) error {
+						entities, observations, relationships, err := database.SearchAll(keywords)
+						if err != nil {
+							return err
+						}
+
+						totalResults := len(entities) + len(observations) + len(relationships)
+						if totalResults == 0 {
+							fmt.Println("No results found")
+							return nil
+						}
+
+						if len(entities) > 0 {
+							fmt.Printf("\nEntities (%d):\n", len(entities))
+							for _, e := range entities {
+								if withIDs {
+									fmt.Printf("[%d] %s\n", e.ID, e.Text)
+								} else {
+									fmt.Printf("%s\n", e.Text)
+								}
+							}
+						}
+
+						if len(observations) > 0 {
+							fmt.Printf("\nObservations (%d):\n", len(observations))
+							for _, o := range observations {
+								if withIDs {
+									fmt.Printf("[%d] %s: %s (%s)\n", o.ID, o.EntityText, o.Text, o.Timestamp)
+								} else {
+									fmt.Printf("%s: %s (%s)\n", o.EntityText, o.Text, o.Timestamp)
+								}
+							}
+						}
+
+						if len(relationships) > 0 {
+							fmt.Printf("\nRelationships (%d):\n", len(relationships))
+							for _, r := range relationships {
+								if withIDs {
+									fmt.Printf("[%d] %s -[%s]-> %s (%s)\n", r.ID, r.FromText, r.Type, r.ToText, r.Timestamp)
+								} else {
+									fmt.Printf("%s -[%s]-> %s (%s)\n", r.FromText, r.Type, r.ToText, r.Timestamp)
+								}
+							}
+						}
+
+						return nil
+					})
 				},
 			},
 			{
