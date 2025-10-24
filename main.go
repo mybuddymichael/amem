@@ -98,6 +98,22 @@ func buildCommand() *cli.Command {
 						return fmt.Errorf("failed to resolve absolute path: %w", err)
 					}
 
+					// If path is an existing directory, append amem.db to it
+					if info, err := os.Stat(absDBPath); err == nil && info.IsDir() {
+						absDBPath = filepath.Join(absDBPath, "amem.db")
+					}
+
+					// Ensure parent directory exists
+					dir := filepath.Dir(absDBPath)
+					if err := os.MkdirAll(dir, 0o755); err != nil {
+						return fmt.Errorf("failed to create directory: %w", err)
+					}
+
+					// Check if database file already exists
+					if _, err := os.Stat(absDBPath); err == nil {
+						return fmt.Errorf("database already exists at %s (will not overwrite)", absDBPath)
+					}
+
 					// Initialize database
 					database, err := db.Init(absDBPath, encryptionKey)
 					if err != nil {
