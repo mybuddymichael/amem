@@ -570,3 +570,103 @@ func TestDeleteRelationship(t *testing.T) {
 		t.Error("Expected error when deleting non-existent relationship")
 	}
 }
+
+func TestUpdateEntity(t *testing.T) {
+	dbPath := t.TempDir() + "/test_update_entity.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test entity
+	_, err = db.AddEntity("OldName")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	// Update entity
+	err = db.UpdateEntity("OldName", "NewName")
+	if err != nil {
+		t.Fatalf("Failed to update entity: %v", err)
+	}
+
+	// Verify entity was updated
+	entities, err := db.SearchEntities([]string{"NewName"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Errorf("Expected 1 entity with new name, got %d", len(entities))
+	}
+	if len(entities) > 0 && entities[0].Text != "NewName" {
+		t.Errorf("Expected entity text to be 'NewName', got '%s'", entities[0].Text)
+	}
+
+	// Verify old name no longer exists
+	entities, err = db.SearchEntities([]string{"OldName"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 0 {
+		t.Errorf("Expected old entity name to be gone, but found %d entities", len(entities))
+	}
+
+	// Try to update non-existent entity
+	err = db.UpdateEntity("NonExistent", "NewName")
+	if err == nil {
+		t.Error("Expected error when updating non-existent entity")
+	}
+}
+
+func TestUpdateObservation(t *testing.T) {
+	dbPath := t.TempDir() + "/test_update_observation.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test observation
+	obsID, err := db.AddObservation("TestEntity", "Old observation text")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	// Update observation
+	err = db.UpdateObservation(obsID, "New observation text")
+	if err != nil {
+		t.Fatalf("Failed to update observation: %v", err)
+	}
+
+	// Verify observation was updated
+	observations, err := db.SearchObservations("", []string{"New observation text"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 1 {
+		t.Errorf("Expected 1 observation with new text, got %d", len(observations))
+	}
+	if len(observations) > 0 && observations[0].Text != "New observation text" {
+		t.Errorf("Expected observation text to be 'New observation text', got '%s'", observations[0].Text)
+	}
+
+	// Verify old text no longer exists
+	observations, err = db.SearchObservations("", []string{"Old observation text"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 0 {
+		t.Errorf("Expected old observation text to be gone, but found %d observations", len(observations))
+	}
+
+	// Try to update non-existent observation
+	err = db.UpdateObservation(99999, "New text")
+	if err == nil {
+		t.Error("Expected error when updating non-existent observation")
+	}
+}

@@ -635,7 +635,20 @@ func buildCommand() *cli.Command {
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							entityName := cmd.Args().First()
+							newName := cmd.String("new-name")
+
+							if entityName == "" {
+								return fmt.Errorf("entity name is required")
+							}
+
+							return withDB(func(database *db.DB) error {
+								if err := database.UpdateEntity(entityName, newName); err != nil {
+									return err
+								}
+								fmt.Printf("Updated entity '%s' to '%s'\n", entityName, newName)
+								return nil
+							})
 						},
 					},
 					{
@@ -654,7 +667,16 @@ func buildCommand() *cli.Command {
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							id := cmd.Int("id")
+							newText := cmd.String("new-text")
+
+							return withDB(func(database *db.DB) error {
+								if err := database.UpdateObservation(int64(id), newText); err != nil {
+									return err
+								}
+								fmt.Printf("Updated observation ID %d\n", id)
+								return nil
+							})
 						},
 					},
 				},

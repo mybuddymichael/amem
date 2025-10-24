@@ -456,3 +456,41 @@ func (db *DB) CountRelationships() (int, error) {
 	}
 	return count, nil
 }
+
+// UpdateEntity updates an entity's text by its current text.
+func (db *DB) UpdateEntity(text, newText string) error {
+	result, err := db.conn.Exec("UPDATE entities SET text = ? WHERE text = ?", newText, text)
+	if err != nil {
+		return fmt.Errorf("failed to update entity: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("entity '%s' not found", text)
+	}
+
+	return nil
+}
+
+// UpdateObservation updates an observation's text by ID.
+func (db *DB) UpdateObservation(id int64, newText string) error {
+	result, err := db.conn.Exec("UPDATE observations SET text = ? WHERE id = ?", newText, id)
+	if err != nil {
+		return fmt.Errorf("failed to update observation: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("observation with ID %d not found", id)
+	}
+
+	return nil
+}
