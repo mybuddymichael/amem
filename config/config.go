@@ -72,14 +72,25 @@ func Write(path string, cfg *Config) error {
 	return nil
 }
 
-// GlobalPath returns the path to the global config file.
-// On Unix: ~/.config/amem/config.json
-// On macOS: ~/Library/Application Support/amem/config.json
-// On Windows: %AppData%/amem/config.json
-func GlobalPath() (string, error) {
-	configDir, err := os.UserConfigDir()
+// xdgConfigHome returns the XDG config directory.
+// Checks $XDG_CONFIG_HOME, falls back to ~/.config
+func xdgConfigHome() (string, error) {
+	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
+		return dir, nil
+	}
+	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get user config directory: %w", err)
+		return "", fmt.Errorf("failed to get home directory: %w", err)
+	}
+	return filepath.Join(home, ".config"), nil
+}
+
+// GlobalPath returns the path to the global config file.
+// Uses XDG config directory: $XDG_CONFIG_HOME/amem/config.json or ~/.config/amem/config.json
+func GlobalPath() (string, error) {
+	configDir, err := xdgConfigHome()
+	if err != nil {
+		return "", fmt.Errorf("failed to get config directory: %w", err)
 	}
 
 	return filepath.Join(configDir, "amem", "config.json"), nil
