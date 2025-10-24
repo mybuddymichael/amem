@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"amem/config"
 	"amem/db"
+	"amem/keyring"
 	"github.com/urfave/cli/v3"
 )
 
@@ -40,10 +43,20 @@ func buildCommand() *cli.Command {
 						Name:  "encryption-key",
 						Usage: "Encryption key for the database",
 					},
+					&cli.BoolFlag{
+						Name:  "global",
+						Usage: "Force global config",
+					},
+					&cli.BoolFlag{
+						Name:  "local",
+						Usage: "Use local config (.amem/config.json)",
+					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					dbPath := cmd.String("db-path")
 					encryptionKey := cmd.String("encryption-key")
+					useGlobal := cmd.Bool("global")
+					useLocal := cmd.Bool("local")
 
 					if dbPath == "" {
 						return fmt.Errorf("--db-path is required")
@@ -51,8 +64,42 @@ func buildCommand() *cli.Command {
 					if encryptionKey == "" {
 						return fmt.Errorf("--encryption-key is required")
 					}
+					if useGlobal && useLocal {
+						return fmt.Errorf("cannot specify both --global and --local")
+					}
 
-					database, err := db.Init(dbPath, encryptionKey)
+					// Determine config path
+					var configPath string
+					var keyringAccount string
+					if useLocal {
+						cwd, err := os.Getwd()
+						if err != nil {
+							return fmt.Errorf("failed to get current directory: %w", err)
+						}
+						configPath = config.LocalPath(cwd)
+						keyringAccount = "local:" + cwd
+					} else {
+						var err error
+						configPath, err = config.GlobalPath()
+						if err != nil {
+							return fmt.Errorf("failed to get global config path: %w", err)
+						}
+						keyringAccount = "global"
+					}
+
+					// Check if config exists and warn
+					if _, err := os.Stat(configPath); err == nil {
+						fmt.Fprintf(os.Stderr, "Warning: overwriting existing config at %s\n", configPath)
+					}
+
+					// Convert db path to absolute
+					absDBPath, err := filepath.Abs(dbPath)
+					if err != nil {
+						return fmt.Errorf("failed to resolve absolute path: %w", err)
+					}
+
+					// Initialize database
+					database, err := db.Init(absDBPath, encryptionKey)
 					if err != nil {
 						return fmt.Errorf("failed to initialize database: %w", err)
 					}
@@ -62,7 +109,21 @@ func buildCommand() *cli.Command {
 						}
 					}()
 
-					fmt.Printf("Database initialized at %s\n", dbPath)
+					// Save config
+					cfg := &config.Config{
+						DBPath: absDBPath,
+					}
+					if err := config.Write(configPath, cfg); err != nil {
+						return fmt.Errorf("failed to write config: %w", err)
+					}
+
+					// Save encryption key to keychain
+					if err := keyring.Set(keyringAccount, encryptionKey); err != nil {
+						return fmt.Errorf("failed to save encryption key: %w", err)
+					}
+
+					fmt.Printf("Database initialized at %s\n", absDBPath)
+					fmt.Printf("Config saved to %s\n", configPath)
 					return nil
 				},
 			},

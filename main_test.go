@@ -67,16 +67,14 @@ func TestInitCommand(t *testing.T) {
 	}
 
 	// Check flags
-	expectedFlags := map[string]string{
-		"db-path":        "Path to the database file",
-		"encryption-key": "Encryption key for the database",
+	expectedStringFlags := []string{"db-path", "encryption-key"}
+	expectedBoolFlags := []string{"global", "local"}
+
+	if len(initCmd.Flags) != len(expectedStringFlags)+len(expectedBoolFlags) {
+		t.Errorf("Expected %d flags, got %d", len(expectedStringFlags)+len(expectedBoolFlags), len(initCmd.Flags))
 	}
 
-	if len(initCmd.Flags) != len(expectedFlags) {
-		t.Errorf("Expected %d flags, got %d", len(expectedFlags), len(initCmd.Flags))
-	}
-
-	for name := range expectedFlags {
+	for _, name := range expectedStringFlags {
 		flag := findFlag(initCmd.Flags, name)
 		if flag == nil {
 			t.Errorf("Flag %q not found", name)
@@ -84,6 +82,17 @@ func TestInitCommand(t *testing.T) {
 		}
 		if _, ok := flag.(*cli.StringFlag); !ok {
 			t.Errorf("Flag %q is not a StringFlag", name)
+		}
+	}
+
+	for _, name := range expectedBoolFlags {
+		flag := findFlag(initCmd.Flags, name)
+		if flag == nil {
+			t.Errorf("Flag %q not found", name)
+			continue
+		}
+		if _, ok := flag.(*cli.BoolFlag); !ok {
+			t.Errorf("Flag %q is not a BoolFlag", name)
 		}
 	}
 }
