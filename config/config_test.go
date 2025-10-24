@@ -143,3 +143,85 @@ func TestLocalPath(t *testing.T) {
 		t.Errorf("expected %s, got %s", expected, path)
 	}
 }
+
+func TestFindLocalInCurrentDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &Config{DBPath: "/test/path.db"}
+	configPath := LocalPath(tmpDir)
+
+	if err := Write(configPath, cfg); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	found, err := FindLocal(tmpDir)
+	if err != nil {
+		t.Fatalf("FindLocal failed: %v", err)
+	}
+
+	if found != configPath {
+		t.Errorf("expected %s, got %s", configPath, found)
+	}
+}
+
+func TestFindLocalInParentDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &Config{DBPath: "/test/path.db"}
+	configPath := LocalPath(tmpDir)
+
+	if err := Write(configPath, cfg); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	// Search from a subdirectory
+	subDir := filepath.Join(tmpDir, "subdir")
+	if err := os.Mkdir(subDir, 0o755); err != nil {
+		t.Fatalf("failed to create subdir: %v", err)
+	}
+
+	found, err := FindLocal(subDir)
+	if err != nil {
+		t.Fatalf("FindLocal failed: %v", err)
+	}
+
+	if found != configPath {
+		t.Errorf("expected %s, got %s", configPath, found)
+	}
+}
+
+func TestFindLocalMultipleLevelsUp(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := &Config{DBPath: "/test/path.db"}
+	configPath := LocalPath(tmpDir)
+
+	if err := Write(configPath, cfg); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	// Create nested subdirectories
+	deepDir := filepath.Join(tmpDir, "level1", "level2", "level3")
+	if err := os.MkdirAll(deepDir, 0o755); err != nil {
+		t.Fatalf("failed to create deep dir: %v", err)
+	}
+
+	found, err := FindLocal(deepDir)
+	if err != nil {
+		t.Fatalf("FindLocal failed: %v", err)
+	}
+
+	if found != configPath {
+		t.Errorf("expected %s, got %s", configPath, found)
+	}
+}
+
+func TestFindLocalNotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	_, err := FindLocal(tmpDir)
+	if err == nil {
+		t.Fatal("expected error when config not found")
+	}
+
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("expected error to wrap os.ErrNotExist, got %v", err)
+	}
+}

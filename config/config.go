@@ -81,3 +81,23 @@ func GlobalPath() (string, error) {
 func LocalPath(dir string) string {
 	return filepath.Join(dir, ".amem", "config.json")
 }
+
+// FindLocal walks up the directory tree from startDir looking for .amem/config.json.
+// Returns the path to the config file if found, or an error if not found.
+func FindLocal(startDir string) (string, error) {
+	current := startDir
+
+	for {
+		configPath := LocalPath(current)
+		if _, err := os.Stat(configPath); err == nil {
+			return configPath, nil
+		}
+
+		parent := filepath.Dir(current)
+		// Reached filesystem root
+		if parent == current {
+			return "", fmt.Errorf("no local config found: %w", os.ErrNotExist)
+		}
+		current = parent
+	}
+}
