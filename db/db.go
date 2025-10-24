@@ -197,6 +197,84 @@ func buildWhereClause(keywords []string, columns []string) (string, []interface{
 	return strings.Join(conditions, " AND "), args
 }
 
+// DeleteEntity deletes an entity by ID.
+// Observations and relationships are cascade deleted by the database.
+func (db *DB) DeleteEntity(id int64) error {
+	result, err := db.conn.Exec("DELETE FROM entities WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete entity: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("entity with ID %d not found", id)
+	}
+
+	return nil
+}
+
+// DeleteEntityByText deletes an entity by text.
+// Observations and relationships are cascade deleted by the database.
+func (db *DB) DeleteEntityByText(text string) error {
+	result, err := db.conn.Exec("DELETE FROM entities WHERE text = ?", text)
+	if err != nil {
+		return fmt.Errorf("failed to delete entity: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("entity '%s' not found", text)
+	}
+
+	return nil
+}
+
+// DeleteObservation deletes an observation by ID.
+func (db *DB) DeleteObservation(id int64) error {
+	result, err := db.conn.Exec("DELETE FROM observations WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete observation: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("observation with ID %d not found", id)
+	}
+
+	return nil
+}
+
+// DeleteRelationship deletes a relationship by ID.
+func (db *DB) DeleteRelationship(id int64) error {
+	result, err := db.conn.Exec("DELETE FROM relationships WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("failed to delete relationship: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("relationship with ID %d not found", id)
+	}
+
+	return nil
+}
+
 // SearchEntities searches entities by keywords.
 func (db *DB) SearchEntities(keywords []string) ([]Entity, error) {
 	query := "SELECT id, text FROM entities"

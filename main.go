@@ -461,7 +461,35 @@ func buildCommand() *cli.Command {
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							entityName := cmd.Args().First()
+							ids := cmd.IntSlice("ids")
+
+							// Validate that only one method is provided
+							if entityName != "" && len(ids) > 0 {
+								return fmt.Errorf("cannot specify both entity name and --ids")
+							}
+							if entityName == "" && len(ids) == 0 {
+								return fmt.Errorf("must specify either entity name or --ids")
+							}
+
+							return withDB(func(database *db.DB) error {
+								if entityName != "" {
+									// Delete by name
+									if err := database.DeleteEntityByText(entityName); err != nil {
+										return err
+									}
+									fmt.Printf("Deleted entity: %s\n", entityName)
+								} else {
+									// Delete by IDs
+									for _, id := range ids {
+										if err := database.DeleteEntity(int64(id)); err != nil {
+											return fmt.Errorf("failed to delete entity ID %d: %w", id, err)
+										}
+										fmt.Printf("Deleted entity ID %d\n", id)
+									}
+								}
+								return nil
+							})
 						},
 					},
 					{
@@ -475,7 +503,17 @@ func buildCommand() *cli.Command {
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							ids := cmd.IntSlice("ids")
+
+							return withDB(func(database *db.DB) error {
+								for _, id := range ids {
+									if err := database.DeleteObservation(int64(id)); err != nil {
+										return fmt.Errorf("failed to delete observation ID %d: %w", id, err)
+									}
+									fmt.Printf("Deleted observation ID %d\n", id)
+								}
+								return nil
+							})
 						},
 					},
 					{
@@ -489,7 +527,17 @@ func buildCommand() *cli.Command {
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
-							return fmt.Errorf("not yet implemented")
+							ids := cmd.IntSlice("ids")
+
+							return withDB(func(database *db.DB) error {
+								for _, id := range ids {
+									if err := database.DeleteRelationship(int64(id)); err != nil {
+										return fmt.Errorf("failed to delete relationship ID %d: %w", id, err)
+									}
+									fmt.Printf("Deleted relationship ID %d\n", id)
+								}
+								return nil
+							})
 						},
 					},
 				},

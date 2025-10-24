@@ -418,3 +418,155 @@ func TestCascadeDelete(t *testing.T) {
 		t.Error("Grace should still exist after Frank was deleted")
 	}
 }
+
+func TestDeleteEntity(t *testing.T) {
+	dbPath := t.TempDir() + "/test_delete_entity.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test entity
+	id, err := db.AddEntity("TestEntity")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	// Delete by ID
+	err = db.DeleteEntity(id)
+	if err != nil {
+		t.Fatalf("Failed to delete entity: %v", err)
+	}
+
+	// Verify entity was deleted
+	entities, err := db.SearchEntities([]string{"TestEntity"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 0 {
+		t.Errorf("Expected entity to be deleted, but found %d entities", len(entities))
+	}
+
+	// Try to delete non-existent entity
+	err = db.DeleteEntity(99999)
+	if err == nil {
+		t.Error("Expected error when deleting non-existent entity")
+	}
+}
+
+func TestDeleteEntityByText(t *testing.T) {
+	dbPath := t.TempDir() + "/test_delete_entity_text.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test entity
+	_, err = db.AddEntity("TestEntity")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	// Delete by text
+	err = db.DeleteEntityByText("TestEntity")
+	if err != nil {
+		t.Fatalf("Failed to delete entity: %v", err)
+	}
+
+	// Verify entity was deleted
+	entities, err := db.SearchEntities([]string{"TestEntity"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 0 {
+		t.Errorf("Expected entity to be deleted, but found %d entities", len(entities))
+	}
+
+	// Try to delete non-existent entity
+	err = db.DeleteEntityByText("NonExistent")
+	if err == nil {
+		t.Error("Expected error when deleting non-existent entity")
+	}
+}
+
+func TestDeleteObservation(t *testing.T) {
+	dbPath := t.TempDir() + "/test_delete_observation.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test observation
+	obsID, err := db.AddObservation("TestEntity", "Test observation")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	// Delete observation
+	err = db.DeleteObservation(obsID)
+	if err != nil {
+		t.Fatalf("Failed to delete observation: %v", err)
+	}
+
+	// Verify observation was deleted
+	observations, err := db.SearchObservations("", []string{"Test observation"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 0 {
+		t.Errorf("Expected observation to be deleted, but found %d observations", len(observations))
+	}
+
+	// Try to delete non-existent observation
+	err = db.DeleteObservation(99999)
+	if err == nil {
+		t.Error("Expected error when deleting non-existent observation")
+	}
+}
+
+func TestDeleteRelationship(t *testing.T) {
+	dbPath := t.TempDir() + "/test_delete_relationship.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test relationship
+	relID, err := db.AddRelationship("Entity1", "Entity2", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	// Delete relationship
+	err = db.DeleteRelationship(relID)
+	if err != nil {
+		t.Fatalf("Failed to delete relationship: %v", err)
+	}
+
+	// Verify relationship was deleted
+	relationships, err := db.SearchRelationships("", "", "", []string{"knows"})
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 0 {
+		t.Errorf("Expected relationship to be deleted, but found %d relationships", len(relationships))
+	}
+
+	// Try to delete non-existent relationship
+	err = db.DeleteRelationship(99999)
+	if err == nil {
+		t.Error("Expected error when deleting non-existent relationship")
+	}
+}

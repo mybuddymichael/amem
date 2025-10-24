@@ -46,8 +46,8 @@ Use `amem init` to create a config file.
 | `amem delete entity "GitHub"` | Delete an entity |
 | `amem delete observation --ids 1` | Delete an observation with an ID. |
 | `amem delete relationship --ids 14` | Delete a relationship with an ID. |
-| `amen delete entity --ids 14 15 12 9 1 5` | Delete multiple IDs at once, across objects. |
-| `amen edit entity "Michael" --new-name "Michael Hanson"` | Chaneg an entity's name. |
+| `amem delete entity --ids 14 15 12 9 1 5` | Delete multiple entities by ID. |
+| `amem edit entity "Michael" --new-name "Michael Hanson"` | Change an entity's name. |
 | `amem edit observation --id 1 --new-text "Working on a new agent memory project"` | Change an observation's text. |
 
 ## Database schema
