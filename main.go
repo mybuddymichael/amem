@@ -224,7 +224,84 @@ func buildCommand() *cli.Command {
 				Name:  "check",
 				Usage: "Check the status of the database and its encryption",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return fmt.Errorf("not yet implemented")
+					// Discover config
+					cwd, err := os.Getwd()
+					if err != nil {
+						return fmt.Errorf("failed to get current directory: %w", err)
+					}
+
+					var configPath string
+					var configType string
+					var cfg *config.LoadedConfig
+
+					// Try local config first
+					localPath, err := config.FindLocal(cwd)
+					if err == nil {
+						configPath = localPath
+						configType = "local"
+					} else {
+						// Try global config
+						globalPath, err := config.GlobalPath()
+						if err != nil {
+							return fmt.Errorf("failed to get global config path: %w", err)
+						}
+						configPath = globalPath
+						configType = "global"
+					}
+
+					// Load config
+					cfg, err = config.Load()
+					if err != nil {
+						return fmt.Errorf("failed to load config: %w", err)
+					}
+
+					fmt.Printf("✓ Config loaded (%s): %s\n", configType, configPath)
+					fmt.Printf("✓ Database path: %s\n", cfg.DBPath)
+
+					// Check if database file exists
+					if _, err := os.Stat(cfg.DBPath); err != nil {
+						if os.IsNotExist(err) {
+							return fmt.Errorf("✗ Database file not found at %s", cfg.DBPath)
+						}
+						return fmt.Errorf("failed to check database file: %w", err)
+					}
+					fmt.Printf("✓ Database file exists\n")
+
+					// Try to open database (validates encryption key)
+					database, err := db.Open(cfg.DBPath, cfg.EncryptionKey)
+					if err != nil {
+						return fmt.Errorf("✗ Failed to open database: %w", err)
+					}
+					defer func() {
+						if err := database.Close(); err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: failed to close database: %v\n", err)
+						}
+					}()
+
+					fmt.Printf("✓ Encryption key valid\n")
+
+					// Get counts
+					entityCount, err := database.CountEntities()
+					if err != nil {
+						return fmt.Errorf("failed to count entities: %w", err)
+					}
+
+					obsCount, err := database.CountObservations()
+					if err != nil {
+						return fmt.Errorf("failed to count observations: %w", err)
+					}
+
+					relCount, err := database.CountRelationships()
+					if err != nil {
+						return fmt.Errorf("failed to count relationships: %w", err)
+					}
+
+					fmt.Printf("\nDatabase contents:\n")
+					fmt.Printf("  Entities: %d\n", entityCount)
+					fmt.Printf("  Observations: %d\n", obsCount)
+					fmt.Printf("  Relationships: %d\n", relCount)
+
+					return nil
 				},
 			},
 			{

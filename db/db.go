@@ -426,3 +426,33 @@ func (db *DB) SearchAll(keywords []string) ([]Entity, []Observation, []Relations
 
 	return entities, observations, relationships, nil
 }
+
+// CountEntities returns the total number of entities.
+func (db *DB) CountEntities() (int, error) {
+	var count int
+	err := db.conn.QueryRow("SELECT COUNT(*) FROM entities").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count entities: %w", err)
+	}
+	return count, nil
+}
+
+// CountObservations returns the total number of observations.
+func (db *DB) CountObservations() (int, error) {
+	var count int
+	err := db.conn.QueryRow("SELECT COUNT(*) FROM observations").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count observations: %w", err)
+	}
+	return count, nil
+}
+
+// CountRelationships returns the total number of relationships.
+func (db *DB) CountRelationships() (int, error) {
+	var count int
+	err := db.conn.QueryRow("SELECT COUNT(*) FROM relationships").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count relationships: %w", err)
+	}
+	return count, nil
+}
