@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"amem/config"
 	"amem/db"
@@ -89,6 +91,28 @@ func formatRelationships(relationships []db.Relationship, withIDs bool) {
 	printRelationships(relationships, withIDs)
 }
 
+func prompt(message string, defaultValue string) (string, error) {
+	if defaultValue != "" {
+		fmt.Printf("%s [%s]: ", message, defaultValue)
+	} else {
+		fmt.Printf("%s: ", message)
+	}
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		if err := scanner.Err(); err != nil {
+			return "", err
+		}
+		return "", fmt.Errorf("no input provided")
+	}
+
+	value := strings.TrimSpace(scanner.Text())
+	if value == "" && defaultValue != "" {
+		return defaultValue, nil
+	}
+	return value, nil
+}
+
 func buildCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "amem",
@@ -135,14 +159,46 @@ func buildCommand() *cli.Command {
 					useGlobal := cmd.Bool("global")
 					useLocal := cmd.Bool("local")
 
-					if dbPath == "" {
-						return fmt.Errorf("--db-path is required")
-					}
-					if encryptionKey == "" {
-						return fmt.Errorf("--encryption-key is required")
-					}
 					if useGlobal && useLocal {
 						return fmt.Errorf("cannot specify both --global and --local")
+					}
+
+					// Prompt for db-path if not provided
+					if dbPath == "" {
+						var defaultPath string
+						if useLocal {
+							cwd, err := os.Getwd()
+							if err != nil {
+								return fmt.Errorf("failed to get current directory: %w", err)
+							}
+							defaultPath = filepath.Join(cwd, "amem.db")
+						} else {
+							homeDir, err := os.UserHomeDir()
+							if err != nil {
+								return fmt.Errorf("failed to get home directory: %w", err)
+							}
+							defaultPath = filepath.Join(homeDir, "amem.db")
+						}
+						var err error
+						dbPath, err = prompt("Database path", defaultPath)
+						if err != nil {
+							return fmt.Errorf("failed to read db-path: %w", err)
+						}
+						if dbPath == "" {
+							return fmt.Errorf("db-path is required")
+						}
+					}
+
+					// Prompt for encryption-key if not provided
+					if encryptionKey == "" {
+						var err error
+						encryptionKey, err = prompt("Encryption key", "")
+						if err != nil {
+							return fmt.Errorf("failed to read encryption-key: %w", err)
+						}
+						if encryptionKey == "" {
+							return fmt.Errorf("encryption-key is required")
+						}
 					}
 
 					// Determine config path

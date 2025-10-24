@@ -49,6 +49,7 @@ Use `amem init` to create a config file.
 | `amem delete entity --ids 14 15 12 9 1 5` | Delete multiple entities by ID. |
 | `amem edit entity "Michael" --new-name "Michael Hanson"` | Change an entity's name. |
 | `amem edit observation --id 1 --new-text "Working on a new agent memory project"` | Change an observation's text. |
+| `amem change-encryption-key --new-key=L9XlJvCKeifThcHz0FQsf` | Change the encryption key. |
 
 ## Database schema
 
