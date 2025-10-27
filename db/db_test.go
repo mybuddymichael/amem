@@ -670,3 +670,405 @@ func TestUpdateObservation(t *testing.T) {
 		t.Error("Expected error when updating non-existent observation")
 	}
 }
+
+func TestSearchEntities(t *testing.T) {
+	dbPath := t.TempDir() + "/test_search_entities.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test entities
+	_, err = db.AddEntity("Alice")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+	_, err = db.AddEntity("Bob")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+	_, err = db.AddEntity("Charlie")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+	_, err = db.AddEntity("Alice Smith")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	// Search with no keywords - should return all
+	entities, err := db.SearchEntities(nil)
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 4 {
+		t.Errorf("Expected 4 entities, got %d", len(entities))
+	}
+
+	// Search with single keyword
+	entities, err = db.SearchEntities([]string{"Alice"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 2 {
+		t.Errorf("Expected 2 entities matching 'Alice', got %d", len(entities))
+	}
+
+	// Search with multiple keywords (AND logic)
+	entities, err = db.SearchEntities([]string{"Alice", "Smith"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Errorf("Expected 1 entity matching 'Alice' AND 'Smith', got %d", len(entities))
+	}
+	if len(entities) > 0 && entities[0].Text != "Alice Smith" {
+		t.Errorf("Expected 'Alice Smith', got '%s'", entities[0].Text)
+	}
+
+	// Search with no matches
+	entities, err = db.SearchEntities([]string{"Nonexistent"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 0 {
+		t.Errorf("Expected 0 entities, got %d", len(entities))
+	}
+
+	// Verify results are ordered by text
+	entities, err = db.SearchEntities(nil)
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) > 1 && entities[0].Text > entities[1].Text {
+		t.Error("Expected entities to be ordered by text")
+	}
+}
+
+func TestSearchObservations(t *testing.T) {
+	dbPath := t.TempDir() + "/test_search_observations.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test data
+	_, err = db.AddObservation("Alice", "Likes coffee")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+	_, err = db.AddObservation("Alice", "Works remotely")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+	_, err = db.AddObservation("Bob", "Likes coffee")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+	_, err = db.AddObservation("Charlie", "Plays guitar")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	// Search all observations
+	observations, err := db.SearchObservations("", nil)
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 4 {
+		t.Errorf("Expected 4 observations, got %d", len(observations))
+	}
+
+	// Search by entity text
+	observations, err = db.SearchObservations("Alice", nil)
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 2 {
+		t.Errorf("Expected 2 observations for Alice, got %d", len(observations))
+	}
+
+	// Search by keywords
+	observations, err = db.SearchObservations("", []string{"coffee"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 2 {
+		t.Errorf("Expected 2 observations matching 'coffee', got %d", len(observations))
+	}
+
+	// Search by entity and keywords
+	observations, err = db.SearchObservations("Alice", []string{"coffee"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 1 {
+		t.Errorf("Expected 1 observation for Alice with 'coffee', got %d", len(observations))
+	}
+	if len(observations) > 0 && observations[0].Text != "Likes coffee" {
+		t.Errorf("Expected 'Likes coffee', got '%s'", observations[0].Text)
+	}
+
+	// Search with multiple keywords (AND logic)
+	observations, err = db.SearchObservations("", []string{"Alice", "coffee"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 1 {
+		t.Errorf("Expected 1 observation matching 'Alice' AND 'coffee', got %d", len(observations))
+	}
+
+	// Search with no matches
+	observations, err = db.SearchObservations("", []string{"Nonexistent"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 0 {
+		t.Errorf("Expected 0 observations, got %d", len(observations))
+	}
+
+	// Verify observation fields are populated correctly
+	observations, err = db.SearchObservations("Alice", []string{"coffee"})
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) > 0 {
+		obs := observations[0]
+		if obs.EntityText != "Alice" {
+			t.Errorf("Expected entity text 'Alice', got '%s'", obs.EntityText)
+		}
+		if obs.EntityID == 0 {
+			t.Error("Expected non-zero entity ID")
+		}
+		if obs.Timestamp == "" {
+			t.Error("Expected non-empty timestamp")
+		}
+	}
+}
+
+func TestSearchRelationships(t *testing.T) {
+	dbPath := t.TempDir() + "/test_search_relationships.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test data
+	_, err = db.AddRelationship("Alice", "Bob", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+	_, err = db.AddRelationship("Bob", "Charlie", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+	_, err = db.AddRelationship("Alice", "Charlie", "manages")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+	_, err = db.AddRelationship("Dave", "Alice", "reports_to")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	// Search all relationships
+	relationships, err := db.SearchRelationships("", "", "", nil)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 4 {
+		t.Errorf("Expected 4 relationships, got %d", len(relationships))
+	}
+
+	// Search by from entity
+	relationships, err = db.SearchRelationships("Alice", "", "", nil)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 2 {
+		t.Errorf("Expected 2 relationships from Alice, got %d", len(relationships))
+	}
+
+	// Search by to entity
+	relationships, err = db.SearchRelationships("", "Alice", "", nil)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship to Alice, got %d", len(relationships))
+	}
+
+	// Search by relationship type
+	relationships, err = db.SearchRelationships("", "", "knows", nil)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 2 {
+		t.Errorf("Expected 2 'knows' relationships, got %d", len(relationships))
+	}
+
+	// Search with multiple filters
+	relationships, err = db.SearchRelationships("Alice", "Bob", "knows", nil)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship, got %d", len(relationships))
+	}
+	if len(relationships) > 0 {
+		rel := relationships[0]
+		if rel.FromText != "Alice" || rel.ToText != "Bob" || rel.Type != "knows" {
+			t.Errorf("Expected Alice->Bob:knows, got %s->%s:%s", rel.FromText, rel.ToText, rel.Type)
+		}
+	}
+
+	// Search by keywords
+	relationships, err = db.SearchRelationships("", "", "", []string{"manages"})
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship matching 'manages', got %d", len(relationships))
+	}
+
+	// Search with multiple keywords (AND logic)
+	relationships, err = db.SearchRelationships("", "", "", []string{"Alice", "Bob"})
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship matching 'Alice' AND 'Bob', got %d", len(relationships))
+	}
+
+	// Search with keywords and filters
+	relationships, err = db.SearchRelationships("Alice", "", "", []string{"Charlie"})
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship from Alice with 'Charlie', got %d", len(relationships))
+	}
+
+	// Search with no matches
+	relationships, err = db.SearchRelationships("", "", "", []string{"Nonexistent"})
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 0 {
+		t.Errorf("Expected 0 relationships, got %d", len(relationships))
+	}
+
+	// Verify relationship fields are populated correctly
+	relationships, err = db.SearchRelationships("Alice", "Bob", "", nil)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) > 0 {
+		rel := relationships[0]
+		if rel.FromID == 0 || rel.ToID == 0 {
+			t.Error("Expected non-zero entity IDs")
+		}
+		if rel.Timestamp == "" {
+			t.Error("Expected non-empty timestamp")
+		}
+	}
+}
+
+func TestSearchAll(t *testing.T) {
+	dbPath := t.TempDir() + "/test_search_all.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add test data with common keyword
+	_, err = db.AddEntity("Project Alpha")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+	_, err = db.AddObservation("Alice", "Working on Project Alpha")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+	_, err = db.AddRelationship("Bob", "Project Alpha", "manages")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	// Search across all types
+	entities, observations, relationships, err := db.SearchAll([]string{"Alpha"})
+	if err != nil {
+		t.Fatalf("Failed to search all: %v", err)
+	}
+
+	if len(entities) != 1 {
+		t.Errorf("Expected 1 entity matching 'Alpha', got %d", len(entities))
+	}
+	if len(observations) != 1 {
+		t.Errorf("Expected 1 observation matching 'Alpha', got %d", len(observations))
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship matching 'Alpha', got %d", len(relationships))
+	}
+
+	// Search with multiple keywords
+	entities, observations, relationships, err = db.SearchAll([]string{"Project", "Alpha"})
+	if err != nil {
+		t.Fatalf("Failed to search all: %v", err)
+	}
+
+	if len(entities) != 1 {
+		t.Errorf("Expected 1 entity matching 'Project' AND 'Alpha', got %d", len(entities))
+	}
+	if len(observations) != 1 {
+		t.Errorf("Expected 1 observation matching 'Project' AND 'Alpha', got %d", len(observations))
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship matching 'Project' AND 'Alpha', got %d", len(relationships))
+	}
+
+	// Search with no keywords
+	entities, observations, relationships, err = db.SearchAll(nil)
+	if err != nil {
+		t.Fatalf("Failed to search all: %v", err)
+	}
+
+	// Should return all records
+	if len(entities) < 1 {
+		t.Error("Expected at least 1 entity")
+	}
+	if len(observations) < 1 {
+		t.Error("Expected at least 1 observation")
+	}
+	if len(relationships) < 1 {
+		t.Error("Expected at least 1 relationship")
+	}
+
+	// Search with no matches
+	entities, observations, relationships, err = db.SearchAll([]string{"Nonexistent"})
+	if err != nil {
+		t.Fatalf("Failed to search all: %v", err)
+	}
+
+	if len(entities) != 0 {
+		t.Errorf("Expected 0 entities, got %d", len(entities))
+	}
+	if len(observations) != 0 {
+		t.Errorf("Expected 0 observations, got %d", len(observations))
+	}
+	if len(relationships) != 0 {
+		t.Errorf("Expected 0 relationships, got %d", len(relationships))
+	}
+}
