@@ -280,11 +280,6 @@ func TestLoadLocalConfig(t *testing.T) {
 	}
 }
 
-func TestLoadGlobalConfig(t *testing.T) {
-	// Skip - global config test requires environment setup
-	t.Skip("Global config test requires environment setup - tested manually")
-}
-
 func TestLoadNoConfigFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
