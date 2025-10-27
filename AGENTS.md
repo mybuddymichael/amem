@@ -1,6 +1,6 @@
 # Agent guide
 
-**IMPORTANT**: Before anything, read README.md for details about the project.
+**IMPORTANT**: Before anything, ALWAYS read README.md for details about the project, no matter what the current request is.
 
 - Be extremely concise. Sacrifice grammar for the sake of concision.
 - Use `mise` for all build and test-related commands.

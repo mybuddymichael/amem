@@ -4,25 +4,6 @@
 
 A command-line tool that gives an LLM agent memory.
 
-## Stack
-
-- Go
-- sqlite
-- [urfave/cli/v3](https://github.com/urfave/cli) for the CLI
-- [go-sqlcipher](https://github.com/mutecomm/go-sqlcipher) for encrypting the database
-- [go-keyring](https://github.com/zalando/go-keyring) for OS keychain integration
-
-## Configuration
-
-Config is stored as JSON and specifies the database path. amem discovers config in this order:
-
-1. **Local config** (project-specific): `.amem/config.json` – searched by walking up the directory tree from the current directory
-2. **Global config** (user-wide): `~/.config/amem/config.json`
-
-The first config found is used. Once located, amem reads the database path from `db_path` in the config and loads the encrypted database from that location. The encryption key is retrieved from the OS keychain (stored under service `amem`), or falls back to the `AMEM_ENCRYPTION_KEY` environment variable if the keyring is unavailable.
-
-Use `amem init` to create a config file.
-
 ## Examples
 
 | Command | Description |
@@ -51,6 +32,27 @@ Use `amem init` to create a config file.
 | `amem edit observation --id 1 --new-text "Working on a new agent memory project"` | Change an observation's text. |
 | `amem change-encryption-key --new-key=L9XlJvCKeifThcHz0FQsf` | Change the encryption key. |
 
+## Configuration
+
+Each directory can have its own config file, which is used to specify the database path.
+
+Config is stored as JSON and specifies the database path. amem discovers config in this order:
+
+1. **Local config** (project-specific): `.amem/config.json` – searched by walking up the directory tree from the current directory
+2. **Global config** (user-wide): `~/.config/amem/config.json`
+
+The first config found is used. Once located, amem reads the database path from `db_path` in the config and loads the encrypted database from that location. The encryption key is retrieved from the OS keychain (stored under service `amem`), or falls back to the `AMEM_ENCRYPTION_KEY` environment variable if the keyring is unavailable.
+
+Use `amem init` to create a config file.
+
+## Stack
+
+- Go
+- sqlite
+- [urfave/cli/v3](https://github.com/urfave/cli) for the CLI
+- [go-sqlcipher](https://github.com/mutecomm/go-sqlcipher) for encrypting the database
+- [go-keyring](https://github.com/zalando/go-keyring) for OS keychain integration
+
 ## Database schema
 
 | Table | Columns |
@@ -59,7 +61,6 @@ Use `amem init` to create a config file.
 | observations | id, entity_id, text, timestamp |
 | relationships | id, from_id, to_id, type, timestamp |
 
-
 ## Encryption
 
-The database is always fully encrypted using [go-sqlcipher](https://github.com/mutecomm/go-sqlcipher).
+The database is always fully encrypted using [go-sqlcipher](https://github.com/mutecomm/go-sqlcipher). The encryption key is stored in the OS keychain.
