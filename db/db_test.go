@@ -1072,3 +1072,360 @@ func TestSearchAll(t *testing.T) {
 		t.Errorf("Expected 0 relationships, got %d", len(relationships))
 	}
 }
+
+func TestEmptyStrings(t *testing.T) {
+	dbPath := t.TempDir() + "/test_empty_strings.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Empty entity text should work
+	id, err := db.AddEntity("")
+	if err != nil {
+		t.Fatalf("Failed to add empty entity: %v", err)
+	}
+	if id == 0 {
+		t.Error("Expected non-zero ID for empty entity")
+	}
+
+	// Empty observation text should work
+	obsID, err := db.AddObservation("test", "")
+	if err != nil {
+		t.Fatalf("Failed to add observation with empty text: %v", err)
+	}
+	if obsID == 0 {
+		t.Error("Expected non-zero ID for empty observation")
+	}
+
+	// Empty relationship type should work
+	relID, err := db.AddRelationship("A", "B", "")
+	if err != nil {
+		t.Fatalf("Failed to add relationship with empty type: %v", err)
+	}
+	if relID == 0 {
+		t.Error("Expected non-zero ID for relationship with empty type")
+	}
+}
+
+func TestSpecialCharacters(t *testing.T) {
+	dbPath := t.TempDir() + "/test_special_chars.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Test SQL injection patterns
+	sqlInjection := "'; DROP TABLE entities; --"
+	_, err = db.AddEntity(sqlInjection)
+	if err != nil {
+		t.Fatalf("Failed to add entity with SQL injection pattern: %v", err)
+	}
+
+	// Verify entity was added safely
+	entities, err := db.SearchEntities([]string{sqlInjection})
+	if err != nil {
+		t.Fatalf("Failed to search for SQL injection pattern: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Errorf("Expected 1 entity, got %d", len(entities))
+	}
+
+	// Verify tables still exist
+	var count int
+	err = db.conn.QueryRow("SELECT COUNT(*) FROM entities").Scan(&count)
+	if err != nil {
+		t.Fatalf("Tables were damaged by SQL injection: %v", err)
+	}
+
+	// Test unicode and special characters
+	unicode := "用户™ ñ 🚀"
+	id2, err := db.AddEntity(unicode)
+	if err != nil {
+		t.Fatalf("Failed to add entity with unicode: %v", err)
+	}
+
+	entities, err = db.SearchEntities([]string{unicode})
+	if err != nil {
+		t.Fatalf("Failed to search for unicode: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Errorf("Expected 1 unicode entity, got %d", len(entities))
+	}
+	if len(entities) > 0 && entities[0].ID != id2 {
+		t.Errorf("Unicode entity not found correctly")
+	}
+}
+
+func TestWrongEncryptionKey(t *testing.T) {
+	dbPath := t.TempDir() + "/test_wrong_key.db"
+	key := "testkey123456789012"
+
+	// Create database with correct key
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	_ = db.Close()
+
+	// Try to open with wrong key
+	wrongKey := "wrongkey123456789012"
+	_, err = Open(dbPath, wrongKey)
+	if err == nil {
+		t.Error("Expected error when opening with wrong key")
+	}
+}
+
+func TestEmptyEncryptionKey(t *testing.T) {
+	dbPath := t.TempDir() + "/test_empty_key.db"
+
+	// Try to open with empty key
+	_, err := Open(dbPath, "")
+	if err == nil {
+		t.Error("Expected error when opening with empty key")
+	}
+}
+
+func TestCountFunctions(t *testing.T) {
+	dbPath := t.TempDir() + "/test_count.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Initial counts should be zero
+	count, err := db.CountEntities()
+	if err != nil {
+		t.Fatalf("Failed to count entities: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected 0 entities, got %d", count)
+	}
+
+	count, err = db.CountObservations()
+	if err != nil {
+		t.Fatalf("Failed to count observations: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected 0 observations, got %d", count)
+	}
+
+	count, err = db.CountRelationships()
+	if err != nil {
+		t.Fatalf("Failed to count relationships: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected 0 relationships, got %d", count)
+	}
+
+	// Add some data
+	_, err = db.AddEntity("Entity1")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+	_, err = db.AddEntity("Entity2")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	_, err = db.AddObservation("Entity1", "Obs1")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+	_, err = db.AddObservation("Entity1", "Obs2")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+	_, err = db.AddObservation("Entity2", "Obs3")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	_, err = db.AddRelationship("Entity1", "Entity2", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	// Verify counts
+	count, err = db.CountEntities()
+	if err != nil {
+		t.Fatalf("Failed to count entities: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("Expected 2 entities, got %d", count)
+	}
+
+	count, err = db.CountObservations()
+	if err != nil {
+		t.Fatalf("Failed to count observations: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("Expected 3 observations, got %d", count)
+	}
+
+	count, err = db.CountRelationships()
+	if err != nil {
+		t.Fatalf("Failed to count relationships: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 relationship, got %d", count)
+	}
+}
+
+func TestWhitespaceHandling(t *testing.T) {
+	dbPath := t.TempDir() + "/test_whitespace.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Entities with different whitespace are considered different
+	id1, err := db.AddEntity("Alice")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	id2, err := db.AddEntity(" Alice")
+	if err != nil {
+		t.Fatalf("Failed to add entity with leading space: %v", err)
+	}
+
+	id3, err := db.AddEntity("Alice ")
+	if err != nil {
+		t.Fatalf("Failed to add entity with trailing space: %v", err)
+	}
+
+	// All three should be different entities
+	if id1 == id2 || id1 == id3 || id2 == id3 {
+		t.Error("Entities with different whitespace should be distinct")
+	}
+
+	// Search should find all three
+	entities, err := db.SearchEntities([]string{"Alice"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 3 {
+		t.Errorf("Expected 3 entities with 'Alice', got %d", len(entities))
+	}
+}
+
+func TestDuplicateRelationships(t *testing.T) {
+	dbPath := t.TempDir() + "/test_dup_rels.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add same relationship twice
+	id1, err := db.AddRelationship("Alice", "Bob", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	id2, err := db.AddRelationship("Alice", "Bob", "knows")
+	if err != nil {
+		t.Fatalf("Failed to add duplicate relationship: %v", err)
+	}
+
+	// Should create two distinct relationships
+	if id1 == id2 {
+		t.Error("Duplicate relationships should have different IDs")
+	}
+
+	// Should find both relationships
+	rels, err := db.SearchRelationships("Alice", "Bob", "knows", nil)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(rels) != 2 {
+		t.Errorf("Expected 2 relationships, got %d", len(rels))
+	}
+}
+
+func TestUpdateEntityConflict(t *testing.T) {
+	dbPath := t.TempDir() + "/test_update_conflict.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Create two entities
+	_, err = db.AddEntity("Alice")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	_, err = db.AddEntity("Bob")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	// Try to update Alice to Bob (should fail due to unique constraint)
+	err = db.UpdateEntity("Alice", "Bob")
+	if err == nil {
+		t.Error("Expected error when updating entity to existing name")
+	}
+
+	// Verify Alice still exists
+	entities, err := db.SearchEntities([]string{"Alice"})
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Error("Alice should still exist after failed update")
+	}
+}
+
+func TestUpdateObservationEmpty(t *testing.T) {
+	dbPath := t.TempDir() + "/test_update_obs_empty.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add observation
+	obsID, err := db.AddObservation("Alice", "Original text")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	// Update to empty string
+	err = db.UpdateObservation(obsID, "")
+	if err != nil {
+		t.Fatalf("Failed to update observation to empty string: %v", err)
+	}
+
+	// Verify update worked
+	observations, err := db.SearchObservations("Alice", nil)
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 1 {
+		t.Fatalf("Expected 1 observation, got %d", len(observations))
+	}
+	if observations[0].Text != "" {
+		t.Errorf("Expected empty observation text, got '%s'", observations[0].Text)
+	}
+}
