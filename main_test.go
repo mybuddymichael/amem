@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"os"
 	"testing"
 
 	"github.com/urfave/cli/v3"
@@ -499,6 +501,104 @@ func TestEditObservationSubcommand(t *testing.T) {
 		if required != expected.required {
 			t.Errorf("Flag %q required mismatch: expected %v, got %v", name, expected.required, required)
 		}
+	}
+}
+
+func TestPrompt(t *testing.T) {
+	tests := []struct {
+		name         string
+		message      string
+		defaultValue string
+		input        string
+		expected     string
+		expectError  bool
+	}{
+		{
+			name:         "user provides value",
+			message:      "Enter value",
+			defaultValue: "",
+			input:        "custom\n",
+			expected:     "custom",
+			expectError:  false,
+		},
+		{
+			name:         "user accepts default",
+			message:      "Enter value",
+			defaultValue: "default",
+			input:        "\n",
+			expected:     "default",
+			expectError:  false,
+		},
+		{
+			name:         "user provides value with default available",
+			message:      "Enter value",
+			defaultValue: "default",
+			input:        "custom\n",
+			expected:     "custom",
+			expectError:  false,
+		},
+		{
+			name:         "user provides value with whitespace",
+			message:      "Enter value",
+			defaultValue: "",
+			input:        "  custom  \n",
+			expected:     "custom",
+			expectError:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock stdin
+			oldStdin := os.Stdin
+			defer func() { os.Stdin = oldStdin }()
+
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdin = r
+
+			// Write input
+			go func() {
+				defer func() { _ = w.Close() }()
+				_, _ = w.Write([]byte(tt.input))
+			}()
+
+			// Capture stdout to verify prompt message
+			oldStdout := os.Stdout
+			defer func() { os.Stdout = oldStdout }()
+
+			rOut, wOut, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdout = wOut
+
+			// Run prompt
+			result, err := prompt(tt.message, tt.defaultValue)
+
+			// Close write end and read stdout
+			_ = wOut.Close()
+			var buf bytes.Buffer
+			_, _ = buf.ReadFrom(rOut)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
+			}
+		})
 	}
 }
 
