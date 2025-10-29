@@ -18,3 +18,7 @@ depends = ["format", "lint", "test", "build"]
 
 [tasks.changelog]
 run = "git-cliff -o CHANGELOG.md"
+
+[tasks.release]
+description = "Create a new release"
+file = "scripts/release.sh"
