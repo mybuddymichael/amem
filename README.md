@@ -57,8 +57,9 @@ Specific directories can have their own separate memory databases, even nested w
 
 | Command | Description |
 |---------|-------------|
-| `amem search "Michael" "GitHub" "uses" "tools"` | Search for any mentions of key words. |
-| `amem search --all "Michael" "GitHub" "uses" "tools"` | Search for any mentions of key words. |
+| `amem search "Michael" "GitHub" "uses" "tools"` | Search for any mentions of specific words. |
+| `amem search --any "Michael" "GitHub" "uses" "tools"` | Same as above. |
+| `amem search --all "Michael" "GitHub" "uses" "tools"` | Search for things that contain all the keywords. |
 | `amem search entities "Michael" "tools"` | Search only entities. |
 | `amem search observations --about "GitHub"` | Search for observations about an entity. |
 | `amem search observations --about "GitHub" -- "tools" "AI" "LLM"` | Search for observations about an entity with specific phrases. |

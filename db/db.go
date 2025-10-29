@@ -177,7 +177,7 @@ func (db *DB) AddRelationship(fromText, toText, relType string) (int64, error) {
 }
 
 // buildWhereClause builds a WHERE clause for keyword matching across multiple columns.
-func buildWhereClause(keywords []string, columns []string) (string, []interface{}) {
+func buildWhereClause(keywords []string, columns []string, useUnion bool) (string, []interface{}) {
 	if len(keywords) == 0 {
 		return "", nil
 	}
@@ -194,7 +194,11 @@ func buildWhereClause(keywords []string, columns []string) (string, []interface{
 		conditions = append(conditions, "("+strings.Join(columnConditions, " OR ")+")")
 	}
 
-	return strings.Join(conditions, " AND "), args
+	joiner := " AND "
+	if useUnion {
+		joiner = " OR "
+	}
+	return strings.Join(conditions, joiner), args
 }
 
 // DeleteEntity deletes an entity by ID.
@@ -276,12 +280,12 @@ func (db *DB) DeleteRelationship(id int64) error {
 }
 
 // SearchEntities searches entities by keywords.
-func (db *DB) SearchEntities(keywords []string) ([]Entity, error) {
+func (db *DB) SearchEntities(keywords []string, useUnion bool) ([]Entity, error) {
 	query := "SELECT id, text FROM entities"
 	var args []interface{}
 
 	if len(keywords) > 0 {
-		whereClause, whereArgs := buildWhereClause(keywords, []string{"text"})
+		whereClause, whereArgs := buildWhereClause(keywords, []string{"text"}, useUnion)
 		query += " WHERE " + whereClause
 		args = whereArgs
 	}
@@ -307,7 +311,7 @@ func (db *DB) SearchEntities(keywords []string) ([]Entity, error) {
 }
 
 // SearchObservations searches observations with optional entity filter and keywords.
-func (db *DB) SearchObservations(entityText string, keywords []string) ([]Observation, error) {
+func (db *DB) SearchObservations(entityText string, keywords []string, useUnion bool) ([]Observation, error) {
 	query := `
 		SELECT o.id, o.entity_id, e.text, o.text, o.timestamp
 		FROM observations o
@@ -322,7 +326,7 @@ func (db *DB) SearchObservations(entityText string, keywords []string) ([]Observ
 	}
 
 	if len(keywords) > 0 {
-		whereClause, whereArgs := buildWhereClause(keywords, []string{"o.text", "e.text"})
+		whereClause, whereArgs := buildWhereClause(keywords, []string{"o.text", "e.text"}, useUnion)
 		whereClauses = append(whereClauses, "("+whereClause+")")
 		args = append(args, whereArgs...)
 	}
@@ -352,7 +356,7 @@ func (db *DB) SearchObservations(entityText string, keywords []string) ([]Observ
 }
 
 // SearchRelationships searches relationships with optional filters.
-func (db *DB) SearchRelationships(fromText, toText, relType string, keywords []string) ([]Relationship, error) {
+func (db *DB) SearchRelationships(fromText, toText, relType string, keywords []string, useUnion bool) ([]Relationship, error) {
 	query := `
 		SELECT r.id, r.from_id, e1.text, r.to_id, e2.text, r.type, r.timestamp
 		FROM relationships r
@@ -378,7 +382,7 @@ func (db *DB) SearchRelationships(fromText, toText, relType string, keywords []s
 	}
 
 	if len(keywords) > 0 {
-		whereClause, whereArgs := buildWhereClause(keywords, []string{"e1.text", "e2.text", "r.type"})
+		whereClause, whereArgs := buildWhereClause(keywords, []string{"e1.text", "e2.text", "r.type"}, useUnion)
 		whereClauses = append(whereClauses, "("+whereClause+")")
 		args = append(args, whereArgs...)
 	}
@@ -408,18 +412,18 @@ func (db *DB) SearchRelationships(fromText, toText, relType string, keywords []s
 }
 
 // SearchAll searches across all types (entities, observations, relationships).
-func (db *DB) SearchAll(keywords []string) ([]Entity, []Observation, []Relationship, error) {
-	entities, err := db.SearchEntities(keywords)
+func (db *DB) SearchAll(keywords []string, useUnion bool) ([]Entity, []Observation, []Relationship, error) {
+	entities, err := db.SearchEntities(keywords, useUnion)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	observations, err := db.SearchObservations("", keywords)
+	observations, err := db.SearchObservations("", keywords, useUnion)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	relationships, err := db.SearchRelationships("", "", "", keywords)
+	relationships, err := db.SearchRelationships("", "", "", keywords, useUnion)
 	if err != nil {
 		return nil, nil, nil, err
 	}

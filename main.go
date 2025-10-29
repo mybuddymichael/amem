@@ -472,12 +472,31 @@ func buildCommand() *cli.Command {
 						Name:      "entities",
 						Usage:     "Search only entities",
 						ArgsUsage: "[keywords...]",
+						Flags: []cli.Flag{
+							&cli.BoolFlag{
+								Name:  "any",
+								Usage: "Match any keyword (OR logic, default)",
+							},
+							&cli.BoolFlag{
+								Name:  "all",
+								Usage: "Match all keywords (AND logic)",
+							},
+						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
 							keywords := cmd.Args().Slice()
 							withIDs := cmd.Bool("with-ids")
+							useAny := cmd.Bool("any")
+							useAll := cmd.Bool("all")
+
+							if useAny && useAll {
+								return fmt.Errorf("cannot specify both --any and --all")
+							}
+
+							// Default to union (any)
+							useUnion := !useAll
 
 							return withDB(func(database *db.DB) error {
-								results, err := database.SearchEntities(keywords)
+								results, err := database.SearchEntities(keywords, useUnion)
 								if err != nil {
 									return err
 								}
@@ -494,15 +513,32 @@ func buildCommand() *cli.Command {
 								Name:  "about",
 								Usage: "Search for observations about an entity",
 							},
+							&cli.BoolFlag{
+								Name:  "any",
+								Usage: "Match any keyword (OR logic, default)",
+							},
+							&cli.BoolFlag{
+								Name:  "all",
+								Usage: "Match all keywords (AND logic)",
+							},
 						},
 						ArgsUsage: "[keywords...]",
 						Action: func(ctx context.Context, cmd *cli.Command) error {
 							keywords := cmd.Args().Slice()
 							entityText := cmd.String("about")
 							withIDs := cmd.Bool("with-ids")
+							useAny := cmd.Bool("any")
+							useAll := cmd.Bool("all")
+
+							if useAny && useAll {
+								return fmt.Errorf("cannot specify both --any and --all")
+							}
+
+							// Default to union (any)
+							useUnion := !useAll
 
 							return withDB(func(database *db.DB) error {
-								results, err := database.SearchObservations(entityText, keywords)
+								results, err := database.SearchObservations(entityText, keywords, useUnion)
 								if err != nil {
 									return err
 								}
@@ -527,6 +563,14 @@ func buildCommand() *cli.Command {
 								Name:  "type",
 								Usage: "Search for relationships of a specific type",
 							},
+							&cli.BoolFlag{
+								Name:  "any",
+								Usage: "Match any keyword (OR logic, default)",
+							},
+							&cli.BoolFlag{
+								Name:  "all",
+								Usage: "Match all keywords (AND logic)",
+							},
 						},
 						ArgsUsage: "[keywords...]",
 						Action: func(ctx context.Context, cmd *cli.Command) error {
@@ -535,9 +579,18 @@ func buildCommand() *cli.Command {
 							toText := cmd.String("to")
 							relType := cmd.String("type")
 							withIDs := cmd.Bool("with-ids")
+							useAny := cmd.Bool("any")
+							useAll := cmd.Bool("all")
+
+							if useAny && useAll {
+								return fmt.Errorf("cannot specify both --any and --all")
+							}
+
+							// Default to union (any)
+							useUnion := !useAll
 
 							return withDB(func(database *db.DB) error {
-								results, err := database.SearchRelationships(fromText, toText, relType, keywords)
+								results, err := database.SearchRelationships(fromText, toText, relType, keywords, useUnion)
 								if err != nil {
 									return err
 								}
@@ -552,14 +605,31 @@ func buildCommand() *cli.Command {
 						Name:  "with-ids",
 						Usage: "Show database IDs with results",
 					},
+					&cli.BoolFlag{
+						Name:  "any",
+						Usage: "Match any keyword (OR logic, default)",
+					},
+					&cli.BoolFlag{
+						Name:  "all",
+						Usage: "Match all keywords (AND logic)",
+					},
 				},
 				ArgsUsage: "[keywords...]",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					keywords := cmd.Args().Slice()
 					withIDs := cmd.Bool("with-ids")
+					useAny := cmd.Bool("any")
+					useAll := cmd.Bool("all")
+
+					if useAny && useAll {
+						return fmt.Errorf("cannot specify both --any and --all")
+					}
+
+					// Default to union (any)
+					useUnion := !useAll
 
 					return withDB(func(database *db.DB) error {
-						entities, observations, relationships, err := database.SearchAll(keywords)
+						entities, observations, relationships, err := database.SearchAll(keywords, useUnion)
 						if err != nil {
 							return err
 						}

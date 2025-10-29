@@ -442,7 +442,7 @@ func TestDeleteEntity(t *testing.T) {
 	}
 
 	// Verify entity was deleted
-	entities, err := db.SearchEntities([]string{"TestEntity"})
+	entities, err := db.SearchEntities([]string{"TestEntity"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -480,7 +480,7 @@ func TestDeleteEntityByText(t *testing.T) {
 	}
 
 	// Verify entity was deleted
-	entities, err := db.SearchEntities([]string{"TestEntity"})
+	entities, err := db.SearchEntities([]string{"TestEntity"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -518,7 +518,7 @@ func TestDeleteObservation(t *testing.T) {
 	}
 
 	// Verify observation was deleted
-	observations, err := db.SearchObservations("", []string{"Test observation"})
+	observations, err := db.SearchObservations("", []string{"Test observation"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -556,7 +556,7 @@ func TestDeleteRelationship(t *testing.T) {
 	}
 
 	// Verify relationship was deleted
-	relationships, err := db.SearchRelationships("", "", "", []string{"knows"})
+	relationships, err := db.SearchRelationships("", "", "", []string{"knows"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -594,7 +594,7 @@ func TestUpdateEntity(t *testing.T) {
 	}
 
 	// Verify entity was updated
-	entities, err := db.SearchEntities([]string{"NewName"})
+	entities, err := db.SearchEntities([]string{"NewName"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -606,7 +606,7 @@ func TestUpdateEntity(t *testing.T) {
 	}
 
 	// Verify old name no longer exists
-	entities, err = db.SearchEntities([]string{"OldName"})
+	entities, err = db.SearchEntities([]string{"OldName"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -644,7 +644,7 @@ func TestUpdateObservation(t *testing.T) {
 	}
 
 	// Verify observation was updated
-	observations, err := db.SearchObservations("", []string{"New observation text"})
+	observations, err := db.SearchObservations("", []string{"New observation text"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -656,7 +656,7 @@ func TestUpdateObservation(t *testing.T) {
 	}
 
 	// Verify old text no longer exists
-	observations, err = db.SearchObservations("", []string{"Old observation text"})
+	observations, err = db.SearchObservations("", []string{"Old observation text"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -700,7 +700,7 @@ func TestSearchEntities(t *testing.T) {
 	}
 
 	// Search with no keywords - should return all
-	entities, err := db.SearchEntities(nil)
+	entities, err := db.SearchEntities(nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -709,7 +709,7 @@ func TestSearchEntities(t *testing.T) {
 	}
 
 	// Search with single keyword
-	entities, err = db.SearchEntities([]string{"Alice"})
+	entities, err = db.SearchEntities([]string{"Alice"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -718,7 +718,7 @@ func TestSearchEntities(t *testing.T) {
 	}
 
 	// Search with multiple keywords (AND logic)
-	entities, err = db.SearchEntities([]string{"Alice", "Smith"})
+	entities, err = db.SearchEntities([]string{"Alice", "Smith"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -730,7 +730,7 @@ func TestSearchEntities(t *testing.T) {
 	}
 
 	// Search with no matches
-	entities, err = db.SearchEntities([]string{"Nonexistent"})
+	entities, err = db.SearchEntities([]string{"Nonexistent"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -739,7 +739,7 @@ func TestSearchEntities(t *testing.T) {
 	}
 
 	// Verify results are ordered by text
-	entities, err = db.SearchEntities(nil)
+	entities, err = db.SearchEntities(nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -777,7 +777,7 @@ func TestSearchObservations(t *testing.T) {
 	}
 
 	// Search all observations
-	observations, err := db.SearchObservations("", nil)
+	observations, err := db.SearchObservations("", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -786,7 +786,7 @@ func TestSearchObservations(t *testing.T) {
 	}
 
 	// Search by entity text
-	observations, err = db.SearchObservations("Alice", nil)
+	observations, err = db.SearchObservations("Alice", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -795,7 +795,7 @@ func TestSearchObservations(t *testing.T) {
 	}
 
 	// Search by keywords
-	observations, err = db.SearchObservations("", []string{"coffee"})
+	observations, err = db.SearchObservations("", []string{"coffee"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -804,7 +804,7 @@ func TestSearchObservations(t *testing.T) {
 	}
 
 	// Search by entity and keywords
-	observations, err = db.SearchObservations("Alice", []string{"coffee"})
+	observations, err = db.SearchObservations("Alice", []string{"coffee"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -816,7 +816,7 @@ func TestSearchObservations(t *testing.T) {
 	}
 
 	// Search with multiple keywords (AND logic)
-	observations, err = db.SearchObservations("", []string{"Alice", "coffee"})
+	observations, err = db.SearchObservations("", []string{"Alice", "coffee"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -825,7 +825,7 @@ func TestSearchObservations(t *testing.T) {
 	}
 
 	// Search with no matches
-	observations, err = db.SearchObservations("", []string{"Nonexistent"})
+	observations, err = db.SearchObservations("", []string{"Nonexistent"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -834,7 +834,7 @@ func TestSearchObservations(t *testing.T) {
 	}
 
 	// Verify observation fields are populated correctly
-	observations, err = db.SearchObservations("Alice", []string{"coffee"})
+	observations, err = db.SearchObservations("Alice", []string{"coffee"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
@@ -881,7 +881,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search all relationships
-	relationships, err := db.SearchRelationships("", "", "", nil)
+	relationships, err := db.SearchRelationships("", "", "", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -890,7 +890,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search by from entity
-	relationships, err = db.SearchRelationships("Alice", "", "", nil)
+	relationships, err = db.SearchRelationships("Alice", "", "", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -899,7 +899,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search by to entity
-	relationships, err = db.SearchRelationships("", "Alice", "", nil)
+	relationships, err = db.SearchRelationships("", "Alice", "", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -908,7 +908,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search by relationship type
-	relationships, err = db.SearchRelationships("", "", "knows", nil)
+	relationships, err = db.SearchRelationships("", "", "knows", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -917,7 +917,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search with multiple filters
-	relationships, err = db.SearchRelationships("Alice", "Bob", "knows", nil)
+	relationships, err = db.SearchRelationships("Alice", "Bob", "knows", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -932,7 +932,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search by keywords
-	relationships, err = db.SearchRelationships("", "", "", []string{"manages"})
+	relationships, err = db.SearchRelationships("", "", "", []string{"manages"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -941,7 +941,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search with multiple keywords (AND logic)
-	relationships, err = db.SearchRelationships("", "", "", []string{"Alice", "Bob"})
+	relationships, err = db.SearchRelationships("", "", "", []string{"Alice", "Bob"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -950,7 +950,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search with keywords and filters
-	relationships, err = db.SearchRelationships("Alice", "", "", []string{"Charlie"})
+	relationships, err = db.SearchRelationships("Alice", "", "", []string{"Charlie"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -959,7 +959,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Search with no matches
-	relationships, err = db.SearchRelationships("", "", "", []string{"Nonexistent"})
+	relationships, err = db.SearchRelationships("", "", "", []string{"Nonexistent"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -968,7 +968,7 @@ func TestSearchRelationships(t *testing.T) {
 	}
 
 	// Verify relationship fields are populated correctly
-	relationships, err = db.SearchRelationships("Alice", "Bob", "", nil)
+	relationships, err = db.SearchRelationships("Alice", "Bob", "", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -1008,7 +1008,7 @@ func TestSearchAll(t *testing.T) {
 	}
 
 	// Search across all types
-	entities, observations, relationships, err := db.SearchAll([]string{"Alpha"})
+	entities, observations, relationships, err := db.SearchAll([]string{"Alpha"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search all: %v", err)
 	}
@@ -1024,7 +1024,7 @@ func TestSearchAll(t *testing.T) {
 	}
 
 	// Search with multiple keywords
-	entities, observations, relationships, err = db.SearchAll([]string{"Project", "Alpha"})
+	entities, observations, relationships, err = db.SearchAll([]string{"Project", "Alpha"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search all: %v", err)
 	}
@@ -1040,7 +1040,7 @@ func TestSearchAll(t *testing.T) {
 	}
 
 	// Search with no keywords
-	entities, observations, relationships, err = db.SearchAll(nil)
+	entities, observations, relationships, err = db.SearchAll(nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search all: %v", err)
 	}
@@ -1057,7 +1057,7 @@ func TestSearchAll(t *testing.T) {
 	}
 
 	// Search with no matches
-	entities, observations, relationships, err = db.SearchAll([]string{"Nonexistent"})
+	entities, observations, relationships, err = db.SearchAll([]string{"Nonexistent"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search all: %v", err)
 	}
@@ -1129,7 +1129,7 @@ func TestSpecialCharacters(t *testing.T) {
 	}
 
 	// Verify entity was added safely
-	entities, err := db.SearchEntities([]string{sqlInjection})
+	entities, err := db.SearchEntities([]string{sqlInjection}, false)
 	if err != nil {
 		t.Fatalf("Failed to search for SQL injection pattern: %v", err)
 	}
@@ -1151,7 +1151,7 @@ func TestSpecialCharacters(t *testing.T) {
 		t.Fatalf("Failed to add entity with unicode: %v", err)
 	}
 
-	entities, err = db.SearchEntities([]string{unicode})
+	entities, err = db.SearchEntities([]string{unicode}, false)
 	if err != nil {
 		t.Fatalf("Failed to search for unicode: %v", err)
 	}
@@ -1313,7 +1313,7 @@ func TestWhitespaceHandling(t *testing.T) {
 	}
 
 	// Search should find all three
-	entities, err := db.SearchEntities([]string{"Alice"})
+	entities, err := db.SearchEntities([]string{"Alice"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -1349,7 +1349,7 @@ func TestDuplicateRelationships(t *testing.T) {
 	}
 
 	// Should find both relationships
-	rels, err := db.SearchRelationships("Alice", "Bob", "knows", nil)
+	rels, err := db.SearchRelationships("Alice", "Bob", "knows", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search relationships: %v", err)
 	}
@@ -1386,7 +1386,7 @@ func TestUpdateEntityConflict(t *testing.T) {
 	}
 
 	// Verify Alice still exists
-	entities, err := db.SearchEntities([]string{"Alice"})
+	entities, err := db.SearchEntities([]string{"Alice"}, false)
 	if err != nil {
 		t.Fatalf("Failed to search entities: %v", err)
 	}
@@ -1418,7 +1418,7 @@ func TestUpdateObservationEmpty(t *testing.T) {
 	}
 
 	// Verify update worked
-	observations, err := db.SearchObservations("Alice", nil)
+	observations, err := db.SearchObservations("Alice", nil, false)
 	if err != nil {
 		t.Fatalf("Failed to search observations: %v", err)
 	}
