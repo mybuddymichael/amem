@@ -2,3 +2,4 @@ amem
 coverage.out
 coverage.html
 *.db
+.amem/config*
