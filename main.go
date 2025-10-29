@@ -17,6 +17,16 @@ import (
 
 var version = "dev"
 
+// agentDocsContent is the documentation shown by 'amem agent-docs'
+const agentDocsContent = `<memory>
+	- If the user instructs you to use your memory, use the 'amem' utility.
+	- Run 'amem help' to see the available commands.
+	- Use 'amem search' to find relevant memories based on the conversation and user's request.
+	- As the conversation progresses, use 'amem add' to add new memories.
+	- Be judicious with the memories you add, making sure each is likely to have long-term value.
+	- Prefer proper relationships over relational observations.
+</memory>`
+
 // withDB loads config, opens database, executes fn, and handles cleanup
 func withDB(fn func(*db.DB) error) error {
 	cfg, err := config.Load()
@@ -75,7 +85,8 @@ func buildCommand() *cli.Command {
 				Name:  "agent-docs",
 				Usage: "Show documentation to put in, e.g., AGENTS.md",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return fmt.Errorf("not yet implemented")
+					fmt.Print(agentDocsContent)
+					return nil
 				},
 			},
 			{
