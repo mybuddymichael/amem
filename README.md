@@ -118,9 +118,9 @@ The database is just an sqlite database with the following tables:
 
 | Table | Columns |
 |-------|---------|
-| entities | id, text |
-| observations | id, entity_id, text, timestamp |
-| relationships | id, from_id, to_id, type, timestamp |
+| entities | id (integer), text (string) |
+| observations | id (integer), entity_id (integer), text (string), timestamp (datetime) |
+| relationships | id (integer), from_id (integer), to_id (integer), type (string), timestamp (datetime) |
 
 ## Encryption
 
