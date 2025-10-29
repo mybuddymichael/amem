@@ -19,7 +19,7 @@ brew tap mybuddymichael/tap
 brew install amem
 ```
 
-Or, if you have a version of Go installed, you can close this repo and run `go install`.
+Or, if you have a version of Go installed, you can clone this repo and run `go install`.
 
 Then, initialize a new database with `amem init`.
 
