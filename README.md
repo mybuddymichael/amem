@@ -4,18 +4,34 @@
 
 A command-line tool that gives an LLM agent memory.
 
+With it, you can track entities (people, places, things, etc.), observations about those entities, and relationships between entities. This allows an LLM to store and retrieve information about you, all stored and encrypted locally.
+
+Specific directories can have their own separate memories, even nested within each other.
+
 ## Examples
+
+### Getting started
 
 | Command | Description |
 |---------|-------------|
-| `amem help` | Show instructions on using the tool. |
-| `amen agent-docs` | Show documentation to put in, e.g., AGENTS.md. |
+| `amem help` | Show instructions on using amem. |
+| `amen agent-docs` | Show documentation to put in, e.g., AGENTS.md or CLAUDE.md. |
 | `amem init --db-path ~/.amem.db --encryption-key=L9XlJvCKeifThcHz0FQsf` | Start or use a memory database. |
 | `amem check` | Check the status of the database and its encryption. |
 | `amem add -h` | Get help about a command. |
+
+### Adding things
+
+| Command | Description |
+|---------|-------------|
 | `amem add entity "Michael" "GitHub"` | Add one or more entities to the database. |
 | `amem add observation --entity "Michael" --text "Working on his new agent memory project"` | Add an observation. |
 | `amem add relationship --from "Michael" --to "GitHub" --type "uses"` | Add a relationship. |
+
+### Searching
+
+| Command | Description |
+|---------|-------------|
 | `amem search "Michael" "GitHub" "uses" "tools"` | Search for any mentions of key words. |
 | `amem search entities "Michael" "tools"` | Search only entities. |
 | `amem search observations --about "GitHub"` | Search for observations about an entity. |
@@ -24,13 +40,28 @@ A command-line tool that gives an LLM agent memory.
 | `amem search relationships --to "GitHub"` | Search for relationships where an entity is involved. |
 | `amem search --type "uses" --from "Michael"` | Search for relationships by type or entity. |
 | `amem search --with-ids` | Show database IDs with results. |
+
+### Editing
+
+| Command | Description |
+|---------|-------------|
+| `amem edit entity "Michael" --new-name "Michael Hanson"` | Change an entity's name. |
+| `amem edit observation --id 1 --new-text "Working on a new agent memory project"` | Change an observation's text. |
+
+### Deleting things
+
+| Command | Description |
+|---------|-------------|
 | `amem delete entity "GitHub"` | Delete an entity |
 | `amem delete observation --ids 1` | Delete an observation with an ID. |
 | `amem delete relationship --ids 14` | Delete a relationship with an ID. |
 | `amem delete entity --ids 14 15 12 9 1 5` | Delete multiple entities by ID. |
-| `amem edit entity "Michael" --new-name "Michael Hanson"` | Change an entity's name. |
-| `amem edit observation --id 1 --new-text "Working on a new agent memory project"` | Change an observation's text. |
-| `amem change-encryption-key --new-key=L9XlJvCKeifThcHz0FQsf` | Change the encryption key. |
+
+### Configuration
+
+| Command | Description |
+|---------|-------------|
+| `amem change-encryption-key --old-key=lXnJE --new-key=L9XlJvCKeifThcHz0FQsf` | Change the encryption key. |
 
 ## Configuration
 
