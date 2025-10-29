@@ -38,6 +38,30 @@ type Relationship struct {
 	Timestamp string
 }
 
+// Format returns a formatted string representation of the entity.
+func (e Entity) Format(withID bool) string {
+	if withID {
+		return fmt.Sprintf("[%d] %s", e.ID, e.Text)
+	}
+	return e.Text
+}
+
+// Format returns a formatted string representation of the observation.
+func (o Observation) Format(withID bool) string {
+	if withID {
+		return fmt.Sprintf("[%d] %s: %s (%s)", o.ID, o.EntityText, o.Text, o.Timestamp)
+	}
+	return fmt.Sprintf("%s: %s (%s)", o.EntityText, o.Text, o.Timestamp)
+}
+
+// Format returns a formatted string representation of the relationship.
+func (r Relationship) Format(withID bool) string {
+	if withID {
+		return fmt.Sprintf("[%d] %s -[%s]-> %s (%s)", r.ID, r.FromText, r.Type, r.ToText, r.Timestamp)
+	}
+	return fmt.Sprintf("%s -[%s]-> %s (%s)", r.FromText, r.Type, r.ToText, r.Timestamp)
+}
+
 func Open(path, key string) (*DB, error) {
 	if key == "" {
 		return nil, fmt.Errorf("encryption key is required")

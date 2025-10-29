@@ -11,6 +11,7 @@ import (
 	"amem/config"
 	"amem/db"
 	"amem/keyring"
+	"amem/view"
 	"github.com/urfave/cli/v3"
 )
 
@@ -34,63 +35,6 @@ func withDB(fn func(*db.DB) error) error {
 	}()
 
 	return fn(database)
-}
-
-func printEntities(entities []db.Entity, withIDs bool) {
-	for _, e := range entities {
-		if withIDs {
-			fmt.Printf("[%d] %s\n", e.ID, e.Text)
-		} else {
-			fmt.Printf("%s\n", e.Text)
-		}
-	}
-}
-
-func printObservations(observations []db.Observation, withIDs bool) {
-	for _, o := range observations {
-		if withIDs {
-			fmt.Printf("[%d] %s: %s (%s)\n", o.ID, o.EntityText, o.Text, o.Timestamp)
-		} else {
-			fmt.Printf("%s: %s (%s)\n", o.EntityText, o.Text, o.Timestamp)
-		}
-	}
-}
-
-func printRelationships(relationships []db.Relationship, withIDs bool) {
-	for _, r := range relationships {
-		if withIDs {
-			fmt.Printf("[%d] %s -[%s]-> %s (%s)\n", r.ID, r.FromText, r.Type, r.ToText, r.Timestamp)
-		} else {
-			fmt.Printf("%s -[%s]-> %s (%s)\n", r.FromText, r.Type, r.ToText, r.Timestamp)
-		}
-	}
-}
-
-func formatEntities(entities []db.Entity, withIDs bool) {
-	if len(entities) == 0 {
-		fmt.Println("No entities found")
-		return
-	}
-	fmt.Printf("Found %d entities:\n", len(entities))
-	printEntities(entities, withIDs)
-}
-
-func formatObservations(observations []db.Observation, withIDs bool) {
-	if len(observations) == 0 {
-		fmt.Println("No observations found")
-		return
-	}
-	fmt.Printf("Found %d observations:\n", len(observations))
-	printObservations(observations, withIDs)
-}
-
-func formatRelationships(relationships []db.Relationship, withIDs bool) {
-	if len(relationships) == 0 {
-		fmt.Println("No relationships found")
-		return
-	}
-	fmt.Printf("Found %d relationships:\n", len(relationships))
-	printRelationships(relationships, withIDs)
 }
 
 func prompt(message string, defaultValue string) (string, error) {
@@ -500,7 +444,7 @@ func buildCommand() *cli.Command {
 								if err != nil {
 									return err
 								}
-								formatEntities(results, withIDs)
+								view.FormatEntities(results, withIDs)
 								return nil
 							})
 						},
@@ -542,7 +486,7 @@ func buildCommand() *cli.Command {
 								if err != nil {
 									return err
 								}
-								formatObservations(results, withIDs)
+								view.FormatObservations(results, withIDs)
 								return nil
 							})
 						},
@@ -594,7 +538,7 @@ func buildCommand() *cli.Command {
 								if err != nil {
 									return err
 								}
-								formatRelationships(results, withIDs)
+								view.FormatRelationships(results, withIDs)
 								return nil
 							})
 						},
@@ -634,27 +578,7 @@ func buildCommand() *cli.Command {
 							return err
 						}
 
-						totalResults := len(entities) + len(observations) + len(relationships)
-						if totalResults == 0 {
-							fmt.Println("No results found")
-							return nil
-						}
-
-						if len(entities) > 0 {
-							fmt.Printf("\nEntities (%d):\n", len(entities))
-							printEntities(entities, withIDs)
-						}
-
-						if len(observations) > 0 {
-							fmt.Printf("\nObservations (%d):\n", len(observations))
-							printObservations(observations, withIDs)
-						}
-
-						if len(relationships) > 0 {
-							fmt.Printf("\nRelationships (%d):\n", len(relationships))
-							printRelationships(relationships, withIDs)
-						}
-
+						view.FormatAll(entities, observations, relationships, withIDs)
 						return nil
 					})
 				},
