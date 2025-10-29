@@ -2,10 +2,32 @@ package keyring
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
+// skipIfKeyringUnavailable skips the test if the system keyring is unavailable
+func skipIfKeyringUnavailable(t *testing.T) {
+	t.Helper()
+	// Try a test operation to check if keyring is available
+	testAccount := "keyring-availability-test"
+	err := Set(testAccount, "test")
+	if err != nil {
+		if strings.Contains(err.Error(), "org.freedesktop.secrets") ||
+			strings.Contains(err.Error(), "keyring") ||
+			strings.Contains(err.Error(), "not provided by any .service files") {
+			t.Skip("Skipping test: system keyring service unavailable")
+		}
+		// Unexpected error - let the test continue and fail properly
+		return
+	}
+	// Clean up test entry
+	_ = Delete(testAccount)
+}
+
 func TestSetAndGet(t *testing.T) {
+	skipIfKeyringUnavailable(t)
+
 	account := "test-account"
 	key := "test-key-123"
 
@@ -68,6 +90,8 @@ func TestGetNoKeyNoEnv(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	skipIfKeyringUnavailable(t)
+
 	account := "test-delete-account"
 	key := "test-key-789"
 

@@ -40,6 +40,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	// Set environment variables to use temp home and override keyring
 	t.Setenv("HOME", homeDir)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(homeDir, ".config"))
 	t.Setenv("AMEM_ENCRYPTION_KEY", key)
 
 	return env
