@@ -74,6 +74,7 @@ Specific directories can have their own separate memory databases, even nested w
 |---------|-------------|
 | `amem edit entity "Michael" --new-name "Michael Hanson"` | Change an entity's name. |
 | `amem edit observation --id 1 --new-text "Working on a new agent memory project"` | Change an observation's text. |
+| `amem edit observation --id 1 --new-entity-id 3` | Change which entity an observation is about. |
 
 ### Deleting things
 

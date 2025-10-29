@@ -321,6 +321,120 @@ func TestAddAndSearch(t *testing.T) {
 			t.Errorf("Expected IDs in brackets, got: %s", stdout)
 		}
 	})
+
+	t.Run("search entities with --any flag (OR logic)", func(t *testing.T) {
+		// Add more entities for testing
+		_, _, _ = env.runCLI("add", "entity", "Python", "Golang")
+
+		// Search with --any (should find entities matching ANY keyword)
+		stdout, _, err := env.runCLI("search", "entities", "--any", "Alice", "Python")
+		if err != nil {
+			t.Fatalf("search with --any failed: %v", err)
+		}
+		if !strings.Contains(stdout, "Alice") || !strings.Contains(stdout, "Python") {
+			t.Errorf("Expected both Alice and Python with --any, got: %s", stdout)
+		}
+	})
+
+	t.Run("search entities with --all flag (AND logic)", func(t *testing.T) {
+		// Add entity with multiple keywords
+		_, _, _ = env.runCLI("add", "entity", "Alice Smith")
+
+		// Search with --all (should only find entities matching ALL keywords)
+		stdout, _, err := env.runCLI("search", "entities", "--all", "Alice", "Smith")
+		if err != nil {
+			t.Fatalf("search with --all failed: %v", err)
+		}
+		if !strings.Contains(stdout, "Alice Smith") {
+			t.Errorf("Expected 'Alice Smith' with --all, got: %s", stdout)
+		}
+
+		// Should not find just "Alice" when both keywords required
+		if strings.Contains(stdout, "Alice\n") && !strings.Contains(stdout, "Smith") {
+			t.Errorf("Should not find 'Alice' alone with --all, got: %s", stdout)
+		}
+	})
+
+	t.Run("search observations with --any flag", func(t *testing.T) {
+		// Add more observations
+		_, _, _ = env.runCLI("add", "observation", "--entity", "Alice", "--text", "Likes Python programming")
+
+		stdout, _, err := env.runCLI("search", "observations", "--any", "Go", "Python")
+		if err != nil {
+			t.Fatalf("search observations with --any failed: %v", err)
+		}
+		if !strings.Contains(stdout, "Go projects") || !strings.Contains(stdout, "Python programming") {
+			t.Errorf("Expected observations with Go or Python, got: %s", stdout)
+		}
+	})
+
+	t.Run("search observations with --all flag", func(t *testing.T) {
+		// Add observation with multiple keywords
+		_, _, _ = env.runCLI("add", "observation", "--entity", "Alice", "--text", "Loves Go and Python both")
+
+		stdout, _, err := env.runCLI("search", "observations", "--all", "Go", "Python")
+		if err != nil {
+			t.Fatalf("search observations with --all failed: %v", err)
+		}
+		if !strings.Contains(stdout, "Loves Go and Python both") {
+			t.Errorf("Expected observation with both keywords, got: %s", stdout)
+		}
+	})
+
+	t.Run("search relationships with --any flag", func(t *testing.T) {
+		// Add more relationships
+		_, _, _ = env.runCLI("add", "relationship", "--from", "Alice", "--to", "Python", "--type", "uses")
+
+		stdout, _, err := env.runCLI("search", "relationships", "--any", "knows", "uses")
+		if err != nil {
+			t.Fatalf("search relationships with --any failed: %v", err)
+		}
+		if !strings.Contains(stdout, "knows") && !strings.Contains(stdout, "uses") {
+			t.Errorf("Expected relationships with knows or uses, got: %s", stdout)
+		}
+	})
+
+	t.Run("search relationships with --all flag", func(t *testing.T) {
+		stdout, _, err := env.runCLI("search", "relationships", "--all", "Alice", "uses")
+		if err != nil {
+			t.Fatalf("search relationships with --all failed: %v", err)
+		}
+		if !strings.Contains(stdout, "Alice") || !strings.Contains(stdout, "uses") {
+			t.Errorf("Expected relationships with both Alice and uses, got: %s", stdout)
+		}
+	})
+
+	t.Run("search fails with both --any and --all", func(t *testing.T) {
+		_, stderr, err := env.runCLI("search", "entities", "--any", "--all", "Alice")
+		if err == nil {
+			t.Error("Expected search to fail with both --any and --all")
+		}
+		if !strings.Contains(stderr, "cannot specify both") {
+			t.Errorf("Expected error about conflicting flags, got: %s", stderr)
+		}
+	})
+
+	t.Run("top-level search with --any flag", func(t *testing.T) {
+		stdout, _, err := env.runCLI("search", "--any", "Alice", "Python")
+		if err != nil {
+			t.Fatalf("top-level search with --any failed: %v", err)
+		}
+		// Should find results across all categories
+		if !strings.Contains(stdout, "Entities") || !strings.Contains(stdout, "Observations") {
+			t.Errorf("Expected multiple categories in results, got: %s", stdout)
+		}
+	})
+
+	t.Run("top-level search with --all flag", func(t *testing.T) {
+		stdout, _, err := env.runCLI("search", "--all", "Alice", "Go")
+		if err != nil {
+			t.Fatalf("top-level search with --all failed: %v", err)
+		}
+		// Should only find items containing both keywords
+		if !strings.Contains(stdout, "Alice") || !strings.Contains(stdout, "Go") {
+			t.Errorf("Expected results with both keywords, got: %s", stdout)
+		}
+	})
 }
 
 // TestDelete tests delete commands
