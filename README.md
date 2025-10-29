@@ -4,9 +4,24 @@
 
 A command-line tool that gives an LLM agent memory.
 
-With it, you can track entities (people, places, things, etc.), observations about those entities, and relationships between entities. This allows an LLM to store and retrieve information about you, all stored and encrypted locally.
+With this LLM to store and retrieve information about you, all stored and encrypted locally.
 
-Specific directories can have their own separate memories, even nested within each other.
+Easily track entities (people, places, things, etc.), observations about those entities, and relationships between entities. 
+
+Specific directories can have their own separate memories, even nested within each other. Amem will search up parent directories until it finds a config file, and if not it will use the global config, if available.
+
+## Install and run
+
+If on macOS, you can easily install this with Homebrew:
+
+```bash
+brew tap mybuddymichael/tap
+brew install amem
+```
+
+Or, if you have a version of Go installed, you can close this repo and run `go install`.
+
+Then, initialize a new database with `amem init`.
 
 ## Examples
 
@@ -15,7 +30,7 @@ Specific directories can have their own separate memories, even nested within ea
 | Command | Description |
 |---------|-------------|
 | `amem help` | Show instructions on using amem. |
-| `amen agent-docs` | Show documentation to put in, e.g., AGENTS.md or CLAUDE.md. |
+| `amem agent-docs` | Show documentation to put in, e.g., AGENTS.md or CLAUDE.md. |
 | `amem init --db-path ~/.amem.db --encryption-key=L9XlJvCKeifThcHz0FQsf` | Start or use a memory database. |
 | `amem check` | Check the status of the database and its encryption. |
 | `amem add -h` | Get help about a command. |
@@ -86,6 +101,8 @@ Use `amem init` to create a config file.
 
 ## Database schema
 
+The database is just an sqlite database with the following tables:
+
 | Table | Columns |
 |-------|---------|
 | entities | id, text |
@@ -94,4 +111,4 @@ Use `amem init` to create a config file.
 
 ## Encryption
 
-The database is always fully encrypted using [go-sqlcipher](https://github.com/mutecomm/go-sqlcipher). The encryption key is stored in the OS keychain.
+The database is always fully encrypted using [go-sqlcipher](https://github.com/mutecomm/go-sqlcipher). The encryption key is stored in the OS keychain. An existing key can be replaced with a new key using `amem change-encryption-key`.
