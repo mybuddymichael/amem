@@ -1,0 +1,52 @@
+# Changelog
+
+## [Unreleased]
+
+### Features
+- Make init command interactive by default
+- Implement edit commands for entities and observations
+- Implement 'check' command for database health status
+- Implement delete commands for all entity types
+- Implement search commands with filtering
+- Implement add command logic
+- Treat existing directories in init --db-path as containers for amem.db
+- Use XDG config directory instead of os.UserConfigDir()
+- Update init command to save config and key
+- Implement config discovery and loading
+- Implement directory tree walk for local config
+- Implement config file read/write
+- Store encryption keys in OS keychain
+- Define config file structure
+- Add go-keyring dependency and document in README
+- Implement init command for database initialization
+- Add golangci-lint as mise task
+- Add encrypted database with migrations and comprehensive tests
+- Initial command structure
+
+### Fixes
+- Handle all error returns in db package
+
+### Refactoring
+- Consolidate duplicated search output formatting
+
+### Documentation
+- Improve documentation structure and issue tracking
+- Add configuration section to README
+- Add tickets
+- Adjust doc files and add beads
+- Add LICENSE
+- Add CLAUDE.md
+
+### Testing
+- Add db edge case tests
+- Add comprehensive tests for db search functions
+- Add tests for prompt() function
+
+### CI
+- Add more mise tasks
+- Add mise.toml with go version
+
+### Other
+- Add CLI integration tests
+- Remove useless TestLoadGlobalConfig test
+

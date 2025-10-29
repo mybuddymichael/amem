@@ -15,3 +15,6 @@ run = "golangci-lint run"
 
 [tasks.check]
 depends = ["format", "lint", "test", "build"]
+
+[tasks.changelog]
+run = "git-cliff -o CHANGELOG.md"
