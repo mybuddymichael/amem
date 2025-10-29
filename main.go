@@ -14,6 +14,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+var version = "dev"
+
 // withDB loads config, opens database, executes fn, and handles cleanup
 func withDB(fn func(*db.DB) error) error {
 	cfg, err := config.Load()
@@ -130,6 +132,14 @@ func buildCommand() *cli.Command {
 				Usage: "Show documentation to put in, e.g., AGENTS.md",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
 					return fmt.Errorf("not yet implemented")
+				},
+			},
+			{
+				Name:  "version",
+				Usage: "Display the version",
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					fmt.Println(version)
+					return nil
 				},
 			},
 			{

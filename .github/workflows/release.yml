@@ -79,7 +79,7 @@ jobs:
             depends_on "go" => :build
 
             def install
-              system "go", "build", "-trimpath", *std_go_args(output: bin/"amem", ldflags: "-s -w"), "."
+              system "go", "build", "-trimpath", *std_go_args(output: bin/"amem", ldflags: "-s -w -X main.version=${{ github.ref_name }}"), "."
             end
 
             test do
