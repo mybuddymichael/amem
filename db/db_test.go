@@ -1429,3 +1429,108 @@ func TestUpdateObservationEmpty(t *testing.T) {
 		t.Errorf("Expected empty observation text, got '%s'", observations[0].Text)
 	}
 }
+
+func TestEntityFormat(t *testing.T) {
+	entity := Entity{ID: 42, Text: "Alice"}
+
+	// Test without ID
+	result := entity.Format(false)
+	expected := "Alice"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+
+	// Test with ID
+	result = entity.Format(true)
+	expected = "[42] Alice"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+
+	// Test empty text
+	emptyEntity := Entity{ID: 1, Text: ""}
+	result = emptyEntity.Format(false)
+	if result != "" {
+		t.Errorf("Expected empty string, got '%s'", result)
+	}
+
+	result = emptyEntity.Format(true)
+	expected = "[1] "
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+}
+
+func TestObservationFormat(t *testing.T) {
+	obs := Observation{
+		ID:         123,
+		EntityText: "Alice",
+		Text:       "Likes coffee",
+		Timestamp:  "2024-01-15 10:30:00",
+	}
+
+	// Test without ID
+	result := obs.Format(false)
+	expected := "Alice: Likes coffee (2024-01-15 10:30:00)"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+
+	// Test with ID
+	result = obs.Format(true)
+	expected = "[123] Alice: Likes coffee (2024-01-15 10:30:00)"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+
+	// Test empty text
+	emptyObs := Observation{
+		ID:         1,
+		EntityText: "Bob",
+		Text:       "",
+		Timestamp:  "2024-01-15 10:30:00",
+	}
+	result = emptyObs.Format(false)
+	expected = "Bob:  (2024-01-15 10:30:00)"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+}
+
+func TestRelationshipFormat(t *testing.T) {
+	rel := Relationship{
+		ID:        456,
+		FromText:  "Alice",
+		ToText:    "Bob",
+		Type:      "knows",
+		Timestamp: "2024-01-15 10:30:00",
+	}
+
+	// Test without ID
+	result := rel.Format(false)
+	expected := "Alice -[knows]-> Bob (2024-01-15 10:30:00)"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+
+	// Test with ID
+	result = rel.Format(true)
+	expected = "[456] Alice -[knows]-> Bob (2024-01-15 10:30:00)"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+
+	// Test empty type
+	emptyRel := Relationship{
+		ID:        1,
+		FromText:  "Alice",
+		ToText:    "Bob",
+		Type:      "",
+		Timestamp: "2024-01-15 10:30:00",
+	}
+	result = emptyRel.Format(false)
+	expected = "Alice -[]-> Bob (2024-01-15 10:30:00)"
+	if result != expected {
+		t.Errorf("Expected '%s', got '%s'", expected, result)
+	}
+}
