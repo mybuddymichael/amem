@@ -21,24 +21,24 @@
 
 **Check for ready work:**
 ```bash
-bd ready --json
+bd ready 
 ```
 
 **Create new issues:**
 ```bash
-bd create "Issue title" -t bug|feature|task -p 0-4 --json
-bd create "Issue title" -p 1 --deps discovered-from:bd-123 --json
+bd create "Issue title" -t bug|feature|task -p 0-4 
+bd create "Issue title" -p 1 --deps discovered-from:bd-123 
 ```
 
 **Claim and update:**
 ```bash
-bd update bd-42 --status in_progress --json
-bd update bd-42 --priority 1 --json
+bd update bd-42 --status in_progress 
+bd update bd-42 --priority 1 
 ```
 
 **Complete work:**
 ```bash
-bd close bd-42 --reason "Completed" --json
+bd close bd-42 --reason "Completed" 
 ```
 
 ### Issue Types
@@ -76,7 +76,6 @@ bd automatically syncs with git:
 ### Important Rules
 
 - ✅ Use bd for ALL task tracking
-- ✅ Always use `--json` flag for programmatic use
 - ✅ Link discovered work with `discovered-from` dependencies
 - ✅ Check `bd ready` before asking "what should I work on?"
 - ❌ Do NOT create markdown TODO lists
