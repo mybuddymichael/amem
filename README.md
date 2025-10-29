@@ -1,10 +1,8 @@
 # amem (agent memory)
 
-## What this is
+`amem` is a command-line tool that gives an LLM and agent a memory.
 
-A command-line tool that gives an LLM agent memory.
-
-With this LLM to store and retrieve information about you, all stored and encrypted locally.
+With this, your LLM agent can save information between sessions, and all of it stored and encrypted locally.
 
 Easily track entities (people, places, things, etc.), observations about those entities, and relationships between entities. 
 
@@ -23,7 +21,19 @@ Or, if you have a version of Go installed, you can clone this repo and run `go i
 
 Then, initialize a new database with `amem init`.
 
-## Examples
+## How it works
+
+A memory file is just small, encrypted sqlite database with the following tables:
+
+- Entities (people, places, things, etc.)
+- Observations (notes about those entities)
+- Relationships (connections between entities)
+
+When initializing the memory file, you tell `amem` whether the database is specific to a directory or a global database, where the file should be stored, and the encryption key.
+
+Specific directories can have their own separate memory databases, even nested within each other. Amem will search up parent directories looking for a local config file, and if it doesn't find oneit will use the global config, if available.
+
+## Usage examples
 
 ### Getting started
 
@@ -40,7 +50,7 @@ Then, initialize a new database with `amem init`.
 | Command | Description |
 |---------|-------------|
 | `amem add entity "Michael" "GitHub"` | Add one or more entities to the database. |
-| `amem add observation --entity "Michael" --text "Working on his new agent memory project"` | Add an observation. |
+| `amem add observation --entity "Michael" --text "Working on an agent memory project"` | Add an observation. |
 | `amem add relationship --from "Michael" --to "GitHub" --type "uses"` | Add a relationship. |
 
 ### Searching
@@ -48,6 +58,7 @@ Then, initialize a new database with `amem init`.
 | Command | Description |
 |---------|-------------|
 | `amem search "Michael" "GitHub" "uses" "tools"` | Search for any mentions of key words. |
+| `amem search --all "Michael" "GitHub" "uses" "tools"` | Search for any mentions of key words. |
 | `amem search entities "Michael" "tools"` | Search only entities. |
 | `amem search observations --about "GitHub"` | Search for observations about an entity. |
 | `amem search observations --about "GitHub" -- "tools" "AI" "LLM"` | Search for observations about an entity with specific phrases. |
