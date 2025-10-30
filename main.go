@@ -13,9 +13,18 @@ import (
 	"amem/keyring"
 	"amem/view"
 	"github.com/urfave/cli/v3"
+	"golang.org/x/term"
 )
 
 var version = "dev"
+
+// stdinReader is a global buffered reader for stdin, reused across calls to avoid buffering issues
+var stdinReader *bufio.Reader
+
+// resetStdinReader resets the global stdin reader (used in tests)
+func resetStdinReader() {
+	stdinReader = nil
+}
 
 // agentDocsContent is the documentation shown by 'amem agent-docs'
 const agentDocsContent = `<memory>
@@ -67,6 +76,62 @@ func prompt(message string, defaultValue string) (string, error) {
 		return defaultValue, nil
 	}
 	return value, nil
+}
+
+func securePrompt(message string) (string, error) {
+	fmt.Printf("%s: ", message)
+
+	var password []byte
+	var err error
+
+	// Check if stdin is a terminal
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		// Use secure password reading for terminals
+		password, err = term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Println()
+	} else {
+		// Fall back to regular reading for non-terminals (e.g., in tests or pipes)
+		// Use a global reader to avoid buffering issues when called multiple times
+		if stdinReader == nil {
+			stdinReader = bufio.NewReader(os.Stdin)
+		}
+		line, err := stdinReader.ReadString('\n')
+		if err != nil {
+			return "", err
+		}
+		// Remove the trailing newline
+		password = []byte(strings.TrimSuffix(line, "\n"))
+		fmt.Println()
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	value := strings.TrimSpace(string(password))
+	if value == "" {
+		return "", fmt.Errorf("no input provided")
+	}
+
+	return value, nil
+}
+
+func securePromptWithConfirmation(message string) (string, error) {
+	key, err := securePrompt(message)
+	if err != nil {
+		return "", err
+	}
+
+	confirmation, err := securePrompt(message + " (confirm)")
+	if err != nil {
+		return "", err
+	}
+
+	if key != confirmation {
+		return "", fmt.Errorf("keys do not match")
+	}
+
+	return key, nil
 }
 
 func buildCommand() *cli.Command {
@@ -157,12 +222,9 @@ func buildCommand() *cli.Command {
 					// Prompt for encryption-key if not provided
 					if encryptionKey == "" {
 						var err error
-						encryptionKey, err = prompt("Encryption key", "")
+						encryptionKey, err = securePromptWithConfirmation("Encryption key")
 						if err != nil {
 							return fmt.Errorf("failed to read encryption-key: %w", err)
-						}
-						if encryptionKey == "" {
-							return fmt.Errorf("encryption-key is required")
 						}
 					}
 

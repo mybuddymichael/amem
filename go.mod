@@ -9,5 +9,6 @@ require (
 	github.com/mutecomm/go-sqlcipher/v4 v4.4.2 // indirect
 	github.com/urfave/cli/v3 v3.5.0 // indirect
 	github.com/zalando/go-keyring v0.2.6 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/term v0.36.0 // indirect
 )

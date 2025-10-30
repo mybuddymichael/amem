@@ -649,6 +649,225 @@ func TestPrompt(t *testing.T) {
 	}
 }
 
+func TestSecurePrompt(t *testing.T) {
+	tests := []struct {
+		name        string
+		message     string
+		input       string
+		expected    string
+		expectError bool
+	}{
+		{
+			name:        "user provides value",
+			message:     "Enter password",
+			input:       "secret123\n",
+			expected:    "secret123",
+			expectError: false,
+		},
+		{
+			name:        "user provides value with whitespace",
+			message:     "Enter password",
+			input:       "  secret123  \n",
+			expected:    "secret123",
+			expectError: false,
+		},
+		{
+			name:        "empty input",
+			message:     "Enter password",
+			input:       "\n",
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:        "whitespace only",
+			message:     "Enter password",
+			input:       "   \n",
+			expected:    "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset global reader for clean test
+			resetStdinReader()
+
+			// Mock stdin
+			oldStdin := os.Stdin
+			defer func() { os.Stdin = oldStdin }()
+
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdin = r
+
+			// Write input
+			go func() {
+				defer func() { _ = w.Close() }()
+				_, _ = w.Write([]byte(tt.input))
+			}()
+
+			// Capture stdout to verify prompt message
+			oldStdout := os.Stdout
+			defer func() { os.Stdout = oldStdout }()
+
+			rOut, wOut, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdout = wOut
+
+			// Run securePrompt
+			result, err := securePrompt(tt.message)
+
+			// Close write end and read stdout
+			_ = wOut.Close()
+			var buf bytes.Buffer
+			_, _ = buf.ReadFrom(rOut)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestSecurePromptWithConfirmation(t *testing.T) {
+	tests := []struct {
+		name        string
+		message     string
+		input1      string
+		input2      string
+		expected    string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "matching passwords",
+			message:     "Enter password",
+			input1:      "secret123\n",
+			input2:      "secret123\n",
+			expected:    "secret123",
+			expectError: false,
+		},
+		{
+			name:        "non-matching passwords",
+			message:     "Enter password",
+			input1:      "secret123\n",
+			input2:      "different\n",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "keys do not match",
+		},
+		{
+			name:        "empty first input",
+			message:     "Enter password",
+			input1:      "\n",
+			input2:      "secret123\n",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "no input provided",
+		},
+		{
+			name:        "empty second input",
+			message:     "Enter password",
+			input1:      "secret123\n",
+			input2:      "\n",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "no input provided",
+		},
+		{
+			name:        "matching with whitespace trimming",
+			message:     "Enter password",
+			input1:      "  secret123  \n",
+			input2:      "secret123\n",
+			expected:    "secret123",
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset global reader for clean test
+			resetStdinReader()
+
+			// Mock stdin
+			oldStdin := os.Stdin
+			defer func() { os.Stdin = oldStdin }()
+
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdin = r
+
+			// Write both inputs in a goroutine
+			inputDone := make(chan struct{})
+			go func() {
+				defer close(inputDone)
+				_, _ = w.Write([]byte(tt.input1))
+				_, _ = w.Write([]byte(tt.input2))
+				_ = w.Close()
+			}()
+			defer func() {
+				<-inputDone
+			}()
+
+			// Capture stdout
+			oldStdout := os.Stdout
+			defer func() { os.Stdout = oldStdout }()
+
+			rOut, wOut, err := os.Pipe()
+			if err != nil {
+				t.Fatalf("Failed to create pipe: %v", err)
+			}
+			os.Stdout = wOut
+
+			// Run securePromptWithConfirmation
+			result, err := securePromptWithConfirmation(tt.message)
+
+			// Close write end and read stdout
+			_ = wOut.Close()
+			var buf bytes.Buffer
+			_, _ = buf.ReadFrom(rOut)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error but got none")
+					return
+				}
+				if tt.errorMsg != "" && err.Error() != tt.errorMsg {
+					t.Errorf("Expected error %q, got %q", tt.errorMsg, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
+
 // Helper functions
 func findCommand(commands []*cli.Command, name string) *cli.Command {
 	for _, cmd := range commands {
