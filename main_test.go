@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"testing"
 
@@ -42,6 +43,51 @@ func TestHelpCommand(t *testing.T) {
 
 	if helpCmd.Usage != "Show instructions on using the tool" {
 		t.Errorf("Unexpected help usage: %s", helpCmd.Usage)
+	}
+}
+
+func TestHelpCommandOutput(t *testing.T) {
+	// Capture stdout
+	oldStdout := os.Stdout
+	defer func() { os.Stdout = oldStdout }()
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create pipe: %v", err)
+	}
+	os.Stdout = w
+
+	// Build and run help command
+	cmd := buildCommand()
+	args := []string{"amem", "help"}
+
+	go func() {
+		defer func() { _ = w.Close() }()
+		_ = cmd.Run(context.Background(), args)
+	}()
+
+	// Read output
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+	output := buf.String()
+
+	// Verify output contains expected help text
+	expectedStrings := []string{
+		"NAME:",
+		"amem",
+		"USAGE:",
+		"COMMANDS:",
+		"help",
+		"init",
+		"check",
+		"add",
+		"search",
+	}
+
+	for _, expected := range expectedStrings {
+		if !bytes.Contains([]byte(output), []byte(expected)) {
+			t.Errorf("Expected output to contain %q, but it didn't.\nOutput:\n%s", expected, output)
+		}
 	}
 }
 

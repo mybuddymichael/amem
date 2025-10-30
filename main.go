@@ -78,7 +78,7 @@ func buildCommand() *cli.Command {
 				Name:  "help",
 				Usage: "Show instructions on using the tool",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					return fmt.Errorf("not yet implemented")
+					return cli.ShowAppHelp(cmd)
 				},
 			},
 			{
