@@ -114,34 +114,9 @@ func TestInitCommand(t *testing.T) {
 		t.Errorf("Unexpected init usage: %s", initCmd.Usage)
 	}
 
-	// Check flags
-	expectedStringFlags := []string{"db-path", "encryption-key"}
-	expectedBoolFlags := []string{"global", "local"}
-
-	if len(initCmd.Flags) != len(expectedStringFlags)+len(expectedBoolFlags) {
-		t.Errorf("Expected %d flags, got %d", len(expectedStringFlags)+len(expectedBoolFlags), len(initCmd.Flags))
-	}
-
-	for _, name := range expectedStringFlags {
-		flag := findFlag(initCmd.Flags, name)
-		if flag == nil {
-			t.Errorf("Flag %q not found", name)
-			continue
-		}
-		if _, ok := flag.(*cli.StringFlag); !ok {
-			t.Errorf("Flag %q is not a StringFlag", name)
-		}
-	}
-
-	for _, name := range expectedBoolFlags {
-		flag := findFlag(initCmd.Flags, name)
-		if flag == nil {
-			t.Errorf("Flag %q not found", name)
-			continue
-		}
-		if _, ok := flag.(*cli.BoolFlag); !ok {
-			t.Errorf("Flag %q is not a BoolFlag", name)
-		}
+	// Check that init has no flags (fully interactive)
+	if len(initCmd.Flags) != 0 {
+		t.Errorf("Expected 0 flags, got %d", len(initCmd.Flags))
 	}
 }
 

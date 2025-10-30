@@ -165,67 +165,38 @@ func buildCommand() *cli.Command {
 			{
 				Name:  "init",
 				Usage: "Start or use a memory database",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "db-path",
-						Usage: "Path to the database file",
-					},
-					&cli.StringFlag{
-						Name:  "encryption-key",
-						Usage: "Encryption key for the database",
-					},
-					&cli.BoolFlag{
-						Name:  "global",
-						Usage: "Force global config",
-					},
-					&cli.BoolFlag{
-						Name:  "local",
-						Usage: "Use local config (.amem/config.json)",
-					},
-				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					dbPath := cmd.String("db-path")
-					encryptionKey := cmd.String("encryption-key")
-					useGlobal := cmd.Bool("global")
-					useLocal := cmd.Bool("local")
+					// Prompt for config scope
+					configScope, err := prompt("Global or local config?", "local")
+					if err != nil {
+						return fmt.Errorf("failed to read config scope: %w", err)
+					}
+					useLocal := configScope == "local"
 
-					if useGlobal && useLocal {
-						return fmt.Errorf("cannot specify both --global and --local")
+					// Prompt for database path
+					var defaultPath string
+					if useLocal {
+						cwd, err := os.Getwd()
+						if err != nil {
+							return fmt.Errorf("failed to get current directory: %w", err)
+						}
+						defaultPath = filepath.Join(cwd, "amem.db")
+					} else {
+						homeDir, err := os.UserHomeDir()
+						if err != nil {
+							return fmt.Errorf("failed to get home directory: %w", err)
+						}
+						defaultPath = filepath.Join(homeDir, "amem.db")
+					}
+					dbPath, err := prompt("Database path", defaultPath)
+					if err != nil {
+						return fmt.Errorf("failed to read db-path: %w", err)
 					}
 
-					// Prompt for db-path if not provided
-					if dbPath == "" {
-						var defaultPath string
-						if useLocal {
-							cwd, err := os.Getwd()
-							if err != nil {
-								return fmt.Errorf("failed to get current directory: %w", err)
-							}
-							defaultPath = filepath.Join(cwd, "amem.db")
-						} else {
-							homeDir, err := os.UserHomeDir()
-							if err != nil {
-								return fmt.Errorf("failed to get home directory: %w", err)
-							}
-							defaultPath = filepath.Join(homeDir, "amem.db")
-						}
-						var err error
-						dbPath, err = prompt("Database path", defaultPath)
-						if err != nil {
-							return fmt.Errorf("failed to read db-path: %w", err)
-						}
-						if dbPath == "" {
-							return fmt.Errorf("db-path is required")
-						}
-					}
-
-					// Prompt for encryption-key if not provided
-					if encryptionKey == "" {
-						var err error
-						encryptionKey, err = securePromptWithConfirmation("Encryption key")
-						if err != nil {
-							return fmt.Errorf("failed to read encryption-key: %w", err)
-						}
+					// Prompt for encryption key
+					encryptionKey, err := securePromptWithConfirmation("Encryption key")
+					if err != nil {
+						return fmt.Errorf("failed to read encryption-key: %w", err)
 					}
 
 					// Determine config path
@@ -272,6 +243,26 @@ func buildCommand() *cli.Command {
 					// Check if database file already exists
 					if _, err := os.Stat(absDBPath); err == nil {
 						return fmt.Errorf("database already exists at %s (will not overwrite)", absDBPath)
+					}
+
+					// Show summary and confirm
+					configType := "global"
+					if useLocal {
+						configType = "local"
+					}
+					fmt.Printf("\nSummary:\n")
+					fmt.Printf("  Config type: %s\n", configType)
+					fmt.Printf("  Config path: %s\n", configPath)
+					fmt.Printf("  Database path: %s\n\n", absDBPath)
+					fmt.Printf("IMPORTANT: Save your encryption key in a password manager.\n")
+					fmt.Printf("You cannot recover it if lost.\n\n")
+
+					confirmation, err := prompt("Create database? [y/n]", "")
+					if err != nil {
+						return fmt.Errorf("failed to read confirmation: %w", err)
+					}
+					if confirmation != "y" && confirmation != "yes" {
+						return fmt.Errorf("database creation cancelled")
 					}
 
 					// Initialize database

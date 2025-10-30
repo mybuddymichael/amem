@@ -40,7 +40,7 @@ Specific directories can have their own separate memory databases, even nested w
 | Command | Description |
 |---------|-------------|
 | `amem help` | Show instructions on using amem. |
-| `amem init --db-path ~/.amem.db --encryption-key=L9XlJvCKeifThcHz0FQsf` | Start or use a memory database. |
+| `amem init` | Start or use a memory database (interactive prompts). |
 | `amem check` | Check the status of the database and its encryption. |
 | `amem agent-docs >> AGENTS.md` | Append some basic usage instructions to AGENTS.md (or CLAUDE.md). |
 | `amem add -h` | Get help about a command. |
