@@ -242,6 +242,106 @@ func buildCommand() *cli.Command {
 				},
 			},
 			{
+				Name:  "change-encryption-key",
+				Usage: "Change the encryption key for the database",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "new-key",
+						Usage:    "New encryption key for the database",
+						Required: true,
+					},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					newKey := cmd.String("new-key")
+
+					// Load config to get current key
+					cfg, err := config.Load()
+					if err != nil {
+						return fmt.Errorf("failed to load config: %w", err)
+					}
+
+					// Determine keyring account
+					cwd, err := os.Getwd()
+					if err != nil {
+						return fmt.Errorf("failed to get current directory: %w", err)
+					}
+
+					var keyringAccount string
+					localPath, err := config.FindLocal(cwd)
+					if err == nil {
+						// Using local config
+						keyringAccount = "local:" + cwd
+						_ = localPath // avoid unused variable warning
+					} else {
+						// Using global config
+						keyringAccount = "global"
+					}
+
+					// Check if database exists
+					if _, err := os.Stat(cfg.DBPath); err != nil {
+						if os.IsNotExist(err) {
+							return fmt.Errorf("database file not found at %s", cfg.DBPath)
+						}
+						return fmt.Errorf("failed to check database file: %w", err)
+					}
+
+					// Prompt for confirmation
+					fmt.Println("WARNING: This will re-encrypt the entire database with a new key.")
+					fmt.Println("Make sure you have a backup before proceeding.")
+					confirmation, err := prompt("Continue? Type 'yes' to confirm", "")
+					if err != nil {
+						return fmt.Errorf("failed to read confirmation: %w", err)
+					}
+					if confirmation != "yes" {
+						fmt.Println("Operation cancelled.")
+						return nil
+					}
+
+					// Open database with current key
+					database, err := db.Open(cfg.DBPath, cfg.EncryptionKey)
+					if err != nil {
+						return fmt.Errorf("failed to open database with current key: %w", err)
+					}
+					defer func() {
+						if err := database.Close(); err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: failed to close database: %v\n", err)
+						}
+					}()
+
+					// Rekey the database
+					if err := database.Rekey(newKey); err != nil {
+						return fmt.Errorf("failed to rekey database: %w", err)
+					}
+
+					// Update keyring with new key
+					if err := keyring.Set(keyringAccount, newKey); err != nil {
+						// Database is already rekeyed, so we can't fail here
+						// Print the new key so user doesn't lose it
+						fmt.Fprintf(os.Stderr, "WARNING: Failed to save new key to keyring: %v\n", err)
+						fmt.Fprintf(os.Stderr, "Your database has been rekeyed successfully, but the key was not saved to the keyring.\n")
+						fmt.Fprintf(os.Stderr, "Please save this key manually:\n")
+						fmt.Printf("\nNew encryption key: %s\n\n", newKey)
+						fmt.Fprintf(os.Stderr, "You can set it using the AMEM_ENCRYPTION_KEY environment variable.\n")
+						return nil
+					}
+
+					// Verify by reopening with new key
+					_ = database.Close()
+					verifyDB, err := db.Open(cfg.DBPath, newKey)
+					if err != nil {
+						return fmt.Errorf("rekeying succeeded but verification failed: %w", err)
+					}
+					defer func() {
+						if err := verifyDB.Close(); err != nil {
+							fmt.Fprintf(os.Stderr, "Warning: failed to close verification database: %v\n", err)
+						}
+					}()
+
+					fmt.Println("✓ Database encryption key changed successfully")
+					return nil
+				},
+			},
+			{
 				Name:  "check",
 				Usage: "Check the status of the database and its encryption",
 				Action: func(ctx context.Context, cmd *cli.Command) error {

@@ -13,7 +13,7 @@ func TestTopLevelCommands(t *testing.T) {
 	cmd := buildCommand()
 
 	expectedCommands := []string{
-		"help", "agent-docs", "version", "init", "check", "add", "search", "delete", "edit",
+		"help", "agent-docs", "version", "init", "change-encryption-key", "check", "add", "search", "delete", "edit",
 	}
 
 	if len(cmd.Commands) != len(expectedCommands) {

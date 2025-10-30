@@ -129,6 +129,28 @@ func (db *DB) Conn() *sql.DB {
 	return db.conn
 }
 
+// Rekey changes the encryption key for the database.
+// The database connection remains valid after rekeying.
+func (db *DB) Rekey(newKey string) error {
+	if newKey == "" {
+		return fmt.Errorf("new encryption key cannot be empty")
+	}
+
+	// PRAGMA commands don't support parameterized queries in SQLCipher
+	// We need to use string formatting, but we escape single quotes to prevent SQL injection
+	escapedKey := strings.ReplaceAll(newKey, "'", "''")
+	query := fmt.Sprintf("PRAGMA rekey = '%s'", escapedKey)
+
+	_, err := db.conn.Exec(query)
+	if err != nil {
+		return fmt.Errorf("failed to rekey database: %w", err)
+	}
+
+	// Update stored key
+	db.key = newKey
+	return nil
+}
+
 // AddEntity adds an entity to the database.
 // Returns the entity ID (existing or new).
 func (db *DB) AddEntity(text string) (int64, error) {

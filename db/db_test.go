@@ -1600,3 +1600,113 @@ func TestRelationshipFormat(t *testing.T) {
 		t.Errorf("Expected '%s', got '%s'", expected, result)
 	}
 }
+
+func TestRekey(t *testing.T) {
+	dbPath := t.TempDir() + "/test_rekey.db"
+	oldKey := "oldkey123456789012"
+	newKey := "newkey123456789012"
+
+	// Create database with old key
+	db, err := Init(dbPath, oldKey)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+
+	// Add test data
+	entityID, err := db.AddEntity("TestEntity")
+	if err != nil {
+		t.Fatalf("Failed to add entity: %v", err)
+	}
+
+	obsID, err := db.AddObservation("TestEntity", "Test observation")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	relID, err := db.AddRelationship("TestEntity", "OtherEntity", "relates_to")
+	if err != nil {
+		t.Fatalf("Failed to add relationship: %v", err)
+	}
+
+	// Rekey the database
+	err = db.Rekey(newKey)
+	if err != nil {
+		t.Fatalf("Failed to rekey database: %v", err)
+	}
+
+	// Close database
+	if err := db.Close(); err != nil {
+		t.Fatalf("Failed to close database: %v", err)
+	}
+
+	// Verify old key no longer works
+	_, err = Open(dbPath, oldKey)
+	if err == nil {
+		t.Error("Expected error when opening with old key after rekey")
+	}
+
+	// Verify new key works
+	db, err = Open(dbPath, newKey)
+	if err != nil {
+		t.Fatalf("Failed to open database with new key: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Verify data is preserved
+	entities, err := db.SearchEntities([]string{"TestEntity"}, false)
+	if err != nil {
+		t.Fatalf("Failed to search entities: %v", err)
+	}
+	if len(entities) != 1 {
+		t.Errorf("Expected 1 entity, got %d", len(entities))
+	}
+	if len(entities) > 0 && entities[0].ID != entityID {
+		t.Errorf("Expected entity ID %d, got %d", entityID, entities[0].ID)
+	}
+
+	observations, err := db.SearchObservations("TestEntity", []string{}, false)
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 1 {
+		t.Errorf("Expected 1 observation, got %d", len(observations))
+	}
+	if len(observations) > 0 && observations[0].ID != obsID {
+		t.Errorf("Expected observation ID %d, got %d", obsID, observations[0].ID)
+	}
+
+	relationships, err := db.SearchRelationships("TestEntity", "", "", nil, false)
+	if err != nil {
+		t.Fatalf("Failed to search relationships: %v", err)
+	}
+	if len(relationships) != 1 {
+		t.Errorf("Expected 1 relationship, got %d", len(relationships))
+	}
+	if len(relationships) > 0 && relationships[0].ID != relID {
+		t.Errorf("Expected relationship ID %d, got %d", relID, relationships[0].ID)
+	}
+}
+
+func TestRekeyEmptyKey(t *testing.T) {
+	dbPath := t.TempDir() + "/test_rekey_empty.db"
+	oldKey := "oldkey123456789012"
+
+	// Create database
+	db, err := Init(dbPath, oldKey)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Try to rekey with empty key
+	err = db.Rekey("")
+	if err == nil {
+		t.Error("Expected error when rekeying with empty key")
+	}
+
+	// Verify database still works with old key
+	_, err = db.AddEntity("TestEntity")
+	if err != nil {
+		t.Fatalf("Database should still work after failed rekey: %v", err)
+	}
+}
