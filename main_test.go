@@ -506,7 +506,7 @@ func TestEditObservationSubcommand(t *testing.T) {
 		t.Fatal("edit observation subcommand not found")
 	}
 
-	if obsCmd.Usage != "Change an observation's text" {
+	if obsCmd.Usage != "Change an observation's text or entity" {
 		t.Errorf("Unexpected usage: %s", obsCmd.Usage)
 	}
 
@@ -515,8 +515,9 @@ func TestEditObservationSubcommand(t *testing.T) {
 		flagType string
 		required bool
 	}{
-		"id":       {"IntFlag", true},
-		"new-text": {"StringFlag", true},
+		"id":            {"IntFlag", true},
+		"new-text":      {"StringFlag", false},
+		"new-entity-id": {"IntFlag", false},
 	}
 
 	for name, expected := range expectedFlags {

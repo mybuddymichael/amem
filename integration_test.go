@@ -647,6 +647,57 @@ func TestEdit(t *testing.T) {
 			t.Errorf("Did not expect to find 'Old text', got: %s", searchOut)
 		}
 	})
+
+	t.Run("edit observation entity", func(t *testing.T) {
+		// Add two entities and an observation for the first
+		_, _, _ = env.runCLI("add", "entity", "Entity1", "Entity2")
+		_, _, _ = env.runCLI("add", "observation", "--entity", "Entity1", "--text", "Observation text")
+
+		// Get observation ID
+		stdout, _, _ := env.runCLI("search", "observations", "--with-ids", "--about", "Entity1")
+		idStart := strings.Index(stdout, "[")
+		idEnd := strings.Index(stdout, "]")
+		if idStart == -1 || idEnd == -1 {
+			t.Fatalf("Could not find ID brackets in output: %s", stdout)
+		}
+		var obsID int
+		if _, err := fmt.Sscanf(stdout[idStart:idEnd+1], "[%d]", &obsID); err != nil {
+			t.Fatalf("Could not parse observation ID: %s", stdout)
+		}
+
+		// Get Entity2 ID
+		stdout, _, _ = env.runCLI("search", "entities", "--with-ids", "Entity2")
+		idStart = strings.Index(stdout, "[")
+		idEnd = strings.Index(stdout, "]")
+		if idStart == -1 || idEnd == -1 {
+			t.Fatalf("Could not find ID brackets in output: %s", stdout)
+		}
+		var entity2ID int
+		if _, err := fmt.Sscanf(stdout[idStart:idEnd+1], "[%d]", &entity2ID); err != nil {
+			t.Fatalf("Could not parse entity ID: %s", stdout)
+		}
+
+		// Change observation to point to Entity2
+		editOut, _, err := env.runCLI("edit", "observation", "--id", fmt.Sprintf("%d", obsID), "--new-entity-id", fmt.Sprintf("%d", entity2ID))
+		if err != nil {
+			t.Fatalf("edit observation command failed: %v", err)
+		}
+		if !strings.Contains(editOut, fmt.Sprintf("Updated observation ID %d", obsID)) {
+			t.Errorf("Expected success message, got: %s", editOut)
+		}
+
+		// Verify observation now belongs to Entity2
+		searchOut, _, _ := env.runCLI("search", "observations", "--about", "Entity2")
+		if !strings.Contains(searchOut, "Observation text") {
+			t.Errorf("Expected to find observation under Entity2, got: %s", searchOut)
+		}
+
+		// Verify observation no longer belongs to Entity1
+		searchOut, _, _ = env.runCLI("search", "observations", "--about", "Entity1")
+		if strings.Contains(searchOut, "Observation text") {
+			t.Errorf("Did not expect to find observation under Entity1, got: %s", searchOut)
+		}
+	})
 }
 
 // TestFullWorkflow tests a complete end-to-end workflow

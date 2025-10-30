@@ -724,7 +724,7 @@ func buildCommand() *cli.Command {
 					},
 					{
 						Name:  "observation",
-						Usage: "Change an observation's text",
+						Usage: "Change an observation's text or entity",
 						Flags: []cli.Flag{
 							&cli.IntFlag{
 								Name:     "id",
@@ -732,18 +732,34 @@ func buildCommand() *cli.Command {
 								Required: true,
 							},
 							&cli.StringFlag{
-								Name:     "new-text",
-								Usage:    "New text for the observation",
-								Required: true,
+								Name:  "new-text",
+								Usage: "New text for the observation",
+							},
+							&cli.IntFlag{
+								Name:  "new-entity-id",
+								Usage: "New entity ID for the observation",
 							},
 						},
 						Action: func(ctx context.Context, cmd *cli.Command) error {
 							id := cmd.Int("id")
 							newText := cmd.String("new-text")
+							newEntityID := cmd.Int("new-entity-id")
+
+							// At least one flag must be provided
+							if newText == "" && newEntityID == 0 {
+								return fmt.Errorf("at least one of --new-text or --new-entity-id must be provided")
+							}
 
 							return withDB(func(database *db.DB) error {
-								if err := database.UpdateObservation(int64(id), newText); err != nil {
-									return err
+								if newText != "" {
+									if err := database.UpdateObservation(int64(id), newText); err != nil {
+										return err
+									}
+								}
+								if newEntityID != 0 {
+									if err := database.UpdateObservationEntity(int64(id), int64(newEntityID)); err != nil {
+										return err
+									}
 								}
 								fmt.Printf("Updated observation ID %d\n", id)
 								return nil

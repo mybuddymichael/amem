@@ -671,6 +671,72 @@ func TestUpdateObservation(t *testing.T) {
 	}
 }
 
+func TestUpdateObservationEntity(t *testing.T) {
+	dbPath := t.TempDir() + "/test_update_observation_entity.db"
+	key := "testkey123456789012"
+
+	db, err := Init(dbPath, key)
+	if err != nil {
+		t.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Add two test entities
+	entity1ID, err := db.AddEntity("Entity1")
+	if err != nil {
+		t.Fatalf("Failed to add entity1: %v", err)
+	}
+	entity2ID, err := db.AddEntity("Entity2")
+	if err != nil {
+		t.Fatalf("Failed to add entity2: %v", err)
+	}
+
+	// Add observation for entity1
+	obsID, err := db.AddObservation("Entity1", "Test observation")
+	if err != nil {
+		t.Fatalf("Failed to add observation: %v", err)
+	}
+
+	// Update observation to point to entity2
+	err = db.UpdateObservationEntity(obsID, entity2ID)
+	if err != nil {
+		t.Fatalf("Failed to update observation entity: %v", err)
+	}
+
+	// Verify observation now belongs to entity2
+	observations, err := db.SearchObservations("Entity2", []string{}, false)
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 1 {
+		t.Errorf("Expected 1 observation for Entity2, got %d", len(observations))
+	}
+	if len(observations) > 0 && observations[0].ID != obsID {
+		t.Errorf("Expected observation ID %d, got %d", obsID, observations[0].ID)
+	}
+
+	// Verify observation no longer belongs to entity1
+	observations, err = db.SearchObservations("Entity1", []string{}, false)
+	if err != nil {
+		t.Fatalf("Failed to search observations: %v", err)
+	}
+	if len(observations) != 0 {
+		t.Errorf("Expected 0 observations for Entity1, got %d", len(observations))
+	}
+
+	// Try to update with non-existent entity ID
+	err = db.UpdateObservationEntity(obsID, 99999)
+	if err == nil {
+		t.Error("Expected error when updating with non-existent entity ID")
+	}
+
+	// Try to update non-existent observation
+	err = db.UpdateObservationEntity(99999, entity1ID)
+	if err == nil {
+		t.Error("Expected error when updating non-existent observation")
+	}
+}
+
 func TestSearchEntities(t *testing.T) {
 	dbPath := t.TempDir() + "/test_search_entities.db"
 	key := "testkey123456789012"

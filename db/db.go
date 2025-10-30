@@ -522,3 +522,33 @@ func (db *DB) UpdateObservation(id int64, newText string) error {
 
 	return nil
 }
+
+// UpdateObservationEntity updates which entity an observation is about.
+func (db *DB) UpdateObservationEntity(id int64, newEntityID int64) error {
+	// Validate the new entity exists
+	var count int
+	err := db.conn.QueryRow("SELECT COUNT(*) FROM entities WHERE id = ?", newEntityID).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("failed to check entity: %w", err)
+	}
+	if count == 0 {
+		return fmt.Errorf("entity with ID %d not found", newEntityID)
+	}
+
+	// Update the observation's entity_id
+	result, err := db.conn.Exec("UPDATE observations SET entity_id = ? WHERE id = ?", newEntityID, id)
+	if err != nil {
+		return fmt.Errorf("failed to update observation: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return fmt.Errorf("observation with ID %d not found", id)
+	}
+
+	return nil
+}
